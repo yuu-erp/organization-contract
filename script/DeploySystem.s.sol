@@ -10,10 +10,22 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 contract DeployCoreSystem is Script {
     function run() external {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
+
         vm.startBroadcast(deployerKey);
 
-        // 1. Deploy AccessControl
-        SystemAccessControl accessControl = new SystemAccessControl();
+        // Lấy địa chỉ thật của deployer
+        address deployerAddr = vm.addr(deployerKey);
+
+        // 1. Deploy AccessControl (Proxy)
+        SystemAccessControl accessControlImpl = new SystemAccessControl();
+        ERC1967Proxy accessControlProxy = new ERC1967Proxy(
+            address(accessControlImpl),
+            abi.encodeWithSelector(
+                SystemAccessControl.initialize.selector,
+                deployerAddr
+            )
+        );
+        SystemAccessControl accessControl = SystemAccessControl(address(accessControlProxy));
 
         // 2. Deploy ModuleManager (Proxy)
         ModuleManager mmImpl = new ModuleManager();

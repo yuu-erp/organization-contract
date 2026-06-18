@@ -3,5 +3,8 @@ src = "src"
 out = "out"
 libs = ["lib"]
 ffi = true # BẮT BUỘC để dùng deployUUPSProxy
-
+gas_estimate_multiplier = 400  # x4 gas estimate cho chain 991
+gas_limit = 30000000  # 30M gas limit
+# Thêm dòng này để cho phép ghi file vào thư mục deployments
+fs_permissions = [{ access = "read-write", path = "./deployments/" }]
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -4,5 +4,8 @@ script/Counter.s.sol:CounterScript \
 --private-key 0x91155fa890d4e2cef5b577a7a0023f185129d1f4e43faf5e0f273240ac976674 \
 --broadcast
 
+forge compile 
+
 source .env
-forge script script/DeploySystem.s.s.sol --rpc-url $RPC_URL --simulate
+forge script script/DeploySystem.s.sol --rpc-url $RPC_URL --broadcast --legacy --slow -vvvv
+forge script script/SetupGovernance.s.sol --rpc-url $RPC_URL --broadcast --legacy --slow -vvvv
