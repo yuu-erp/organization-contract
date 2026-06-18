@@ -9,3 +9,13 @@ forge compile
 source .env
 forge script script/DeploySystem.s.sol --rpc-url $RPC_URL --broadcast --legacy --slow -vvvv
 forge script script/SetupGovernance.s.sol --rpc-url $RPC_URL --broadcast --legacy --slow -vvvv
+forge script script/UpgradeMeosLogic.s.sol --rpc-url $RPC_URL --broadcast --legacy --slow -vvvv
+
+0xDB12831eaD3a04220aCb0272C52401d2d2E075c2
+
+cast call 0xDB12831eaD3a04220aCb0272C52401d2d2E075c2 "isComputerActive(uint256)" 101 --rpc-url $RPC_URL
+cast send 0xDB12831eaD3a04220aCb0272C52401d2d2E075c2 "startSession(uint256)" 101 \
+  --rpc-url $RPC_URL \
+  --private-key $PRIVATE_KEY
+
+  cast call 0xAE0Be002fdfe42A089c2149EC52fD577E3A37A11 "implementation()(address)" --rpc-url $RPC_URL

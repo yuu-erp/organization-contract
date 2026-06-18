@@ -5,17 +5,31 @@ import {BaseDomainLogic} from "../../shared/base/BaseDomainLogic.sol";
 import {ModuleConstants} from "../../shared/constants/ModuleConstants.sol";
 
 contract MeosLogicV1 is BaseDomainLogic {
-    // Khai báo mã băm định danh riêng của MEOS
-    constructor(address _factory) BaseDomainLogic(_factory, ModuleConstants.MEOS, ModuleConstants.MEOS_CORE) {
+    // Thêm biến state để test (ví dụ: đếm số phiên đã khởi tạo)
+    mapping(uint256 => bool) public activeSessions;
+
+    constructor(
+        address _factory
+    )
+        BaseDomainLogic(
+            _factory,
+            ModuleConstants.MEOS,
+            ModuleConstants.MEOS_CORE
+        )
+    {
         _disableInitializers();
     }
 
     function initialize() external initializer {
-        // Khởi tạo các thông số ban đầu của máy trạm
+        // Khởi tạo...
     }
 
-    // Sử dụng modifier từ lớp cha để bảo vệ hàm mở máy trạm
     function startSession(uint256 computerId) external onlyActiveModule {
-        // Logic tính tiền giờ và kích hoạt máy trạm CyberKing
+        activeSessions[computerId] = true;
+    }
+
+    // --- HÀM CHO CASTE TEST ---
+    function isComputerActive(uint256 computerId) external view returns (bool) {
+        return activeSessions[computerId];
     }
 }
