@@ -8,7 +8,7 @@ library ModuleConstants {
     bytes32 public constant LOYALTY = keccak256("LOYALTY");
 
     // Sub-Modules của MEOS
-    bytes32 public constant MEOS_CORE = keccak256("MEOS_CORE");
+    bytes32 public constant MEOS_STATIONS = keccak256("MEOS_STATIONS");
 
     // Sub-Modules của IQR
     bytes32 public constant IQR_CORE = keccak256("IQR_CORE");
