@@ -10,6 +10,8 @@ import {RoleHashes} from "./constants/RoleHashes.sol";
 
 import {ISystemAccessControl} from "./interfaces/ISystemAccessControl.sol";
 import {IOrganizationManager} from "./interfaces/IOrganizationManager.sol";
+import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
+import {IBranchModuleManager} from "./interfaces/IBranchModuleManager.sol";
 
 import {OrganizationTypes} from "../types/OrganizationTypes.sol";
 import {BranchTypes} from "../types/BranchTypes.sol";
@@ -59,10 +61,11 @@ contract OrganizationManager is
     }
 
     /**
-     * @dev Tạo mới Organization.
+     * @dev Tạo mới Organization kèm đăng ký module.
      */
     function createOrganization(
-        address owner
+        address owner,
+        bytes32[] calldata moduleKeys
     ) external onlyPlatformAdmin returns (uint256 organizationId) {
         if (owner == address(0)) {
             revert InvalidAddress();
@@ -84,13 +87,24 @@ contract OrganizationManager is
         ownerToOrganizationId[owner] = organizationId;
 
         emit OrganizationCreated(organizationId, owner);
+
+        // Tự động subscribe các module
+        if (moduleRegistry != address(0)) {
+            for (uint256 i = 0; i < moduleKeys.length; i++) {
+                IModuleRegistry(moduleRegistry).subscribeOrgToModule(
+                    organizationId,
+                    moduleKeys[i]
+                );
+            }
+        }
     }
 
     /**
-     * @dev Tạo mới Branch cho Organization.
+     * @dev Tạo mới Branch cho Organization kèm kích hoạt module.
      */
     function createBranch(
-        uint256 organizationId
+        uint256 organizationId,
+        bytes32[] calldata moduleKeysToEnable
     ) external onlyPlatformAdmin returns (uint256 branchId) {
         _requireOrganizationExists(organizationId);
 
@@ -106,6 +120,35 @@ contract OrganizationManager is
         organizationBranches[organizationId].add(branchId);
 
         emit BranchCreated(branchId, organizationId);
+
+        // Tự động provision và kích hoạt các module
+        if (branchModuleManager != address(0)) {
+            IBranchModuleManager(branchModuleManager).provisionBranch(
+                branchId,
+                organizationId
+            );
+
+            for (uint256 i = 0; i < moduleKeysToEnable.length; i++) {
+                IBranchModuleManager(branchModuleManager).enableModule(
+                    branchId,
+                    moduleKeysToEnable[i]
+                );
+            }
+        }
+    }
+
+    /**
+     * @dev Cập nhật địa chỉ ModuleRegistry và BranchModuleManager.
+     */
+    function setRegistryAndManager(
+        address _moduleRegistry,
+        address _branchModuleManager
+    ) external onlyPlatformAdmin {
+        if (_moduleRegistry == address(0) || _branchModuleManager == address(0)) {
+            revert InvalidAddress();
+        }
+        moduleRegistry = _moduleRegistry;
+        branchModuleManager = _branchModuleManager;
     }
 
     /**
@@ -145,6 +188,15 @@ contract OrganizationManager is
         uint256 organizationId
     ) external view returns (bool) {
         return organizations[organizationId].exists;
+    }
+
+    /**
+     * @dev Trả về organizationId của branch.
+     */
+    function getBranchOrgId(
+        uint256 branchId
+    ) external view returns (uint256) {
+        return branches[branchId].organizationId;
     }
 
     /**

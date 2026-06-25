@@ -27,25 +27,28 @@ interface IOrganizationManager {
     error BranchNotFound();
 
     /**
-     * @dev Tạo mới Organization.
-     *
-     * Yêu cầu:
-     * - owner != address(0)
-     * - owner chưa sở hữu Organization nào
+     * @dev Tạo mới Organization kèm danh sách module cần đăng ký.
      */
     function createOrganization(
-        address owner
+        address owner,
+        bytes32[] calldata moduleKeys
     ) external returns (uint256 organizationId);
 
     /**
-     * @dev Tạo mới Branch cho Organization.
-     *
-     * Yêu cầu:
-     * - organizationId tồn tại
+     * @dev Tạo mới Branch cho Organization kèm danh sách module cần kích hoạt.
      */
     function createBranch(
-        uint256 organizationId
+        uint256 organizationId,
+        bytes32[] calldata moduleKeysToEnable
     ) external returns (uint256 branchId);
+
+    /**
+     * @dev Cập nhật địa chỉ ModuleRegistry và BranchModuleManager.
+     */
+    function setRegistryAndManager(
+        address _moduleRegistry,
+        address _branchModuleManager
+    ) external;
 
     /**
      * @dev Trả về organizationId của owner.
@@ -67,6 +70,13 @@ interface IOrganizationManager {
     function organizationExists(
         uint256 organizationId
     ) external view returns (bool);
+
+    /**
+     * @dev Trả về organizationId của branch.
+     */
+    function getBranchOrgId(
+        uint256 branchId
+    ) external view returns (uint256);
 
     /**
      * @dev Kiểm tra Branch tồn tại.

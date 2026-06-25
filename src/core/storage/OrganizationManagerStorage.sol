@@ -54,4 +54,14 @@ abstract contract OrganizationManagerStorage {
      * organizationId => branchIds
      */
     mapping(uint256 => EnumerableSet.UintSet) internal organizationBranches;
+
+    /**
+     * @dev Dịch vụ quản lý đăng ký module.
+     */
+    address public moduleRegistry;
+
+    /**
+     * @dev Dịch vụ quản lý kích hoạt module cho branch.
+     */
+    address public branchModuleManager;
 }
