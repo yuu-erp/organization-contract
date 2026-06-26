@@ -11,6 +11,10 @@ import {ModuleKeys} from "../../core/constants/ModuleKeys.sol";
 contract PCManager is BranchContextUpgradeable {
     uint256 public activePCs;
 
+    // Hằng số quyền này chỉ có ý nghĩa khi đi kèm với ModuleKeys.MODULE_MEOS
+    uint256 public constant PERM_MEOS_PC_MANAGER = 1 << 0;
+    uint256 public constant PERM_MEOS_VIP_SETTING = 1 << 1;
+
     function initialize(
         uint48 _branchId,
         uint48 _orgId,
@@ -19,7 +23,11 @@ contract PCManager is BranchContextUpgradeable {
         __BranchContext_init(_branchId, _orgId, _branchModuleManager);
     }
 
-    function addPC() external onlyIfModuleEnabled(ModuleKeys.MODULE_MEOS) {
+    function addPC()
+        external
+        onlyIfModuleEnabled(ModuleKeys.MODULE_MEOS)
+        requiresModulePermission(ModuleKeys.MODULE_MEOS, PERM_MEOS_PC_MANAGER)
+    {
         activePCs++;
     }
 }

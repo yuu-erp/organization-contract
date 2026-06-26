@@ -34,6 +34,39 @@ abstract contract BranchContextUpgradeable is Initializable {
         _;
     }
 
+    modifier requiresGlobalPermission(uint256 permissionBit) {
+        address hr = IBranchModuleManager(branchModuleManager)
+            .getBranchStaffManager(branchId);
+        if (
+            !IBranchStaffManagerContext(hr).hasGlobalPermission(
+                msg.sender,
+                permissionBit
+            )
+        ) {
+            revert AccessDenied();
+        }
+        _;
+    }
+
+    // Modifier 2: Yêu cầu quyền Module (Ví dụ: MEOS PC Manager)
+    modifier requiresModulePermission(
+        bytes32 moduleKey,
+        uint256 permissionBit
+    ) {
+        address hr = IBranchModuleManager(branchModuleManager)
+            .getBranchStaffManager(branchId);
+        if (
+            !IBranchStaffManagerContext(hr).hasModulePermission(
+                msg.sender,
+                moduleKey,
+                permissionBit
+            )
+        ) {
+            revert AccessDenied();
+        }
+        _;
+    }
+
     function __BranchContext_init(
         uint48 _branchId,
         uint48 _orgId,
