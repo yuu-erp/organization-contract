@@ -17,8 +17,10 @@ import {AccountManager} from "../src/modules/meos/AccountManager.sol";
 import {BranchContextUpgradeable} from "../src/modules/base/BranchContextUpgradeable.sol";
 import {MeosFactory} from "../src/modules/meos/MeosFactory.sol";
 import {IqrRoot} from "../src/modules/iqr/IqrRoot.sol";
+import {POSManager} from "../src/modules/iqr/POSManager.sol";
 import {IqrFactory} from "../src/modules/iqr/IqrFactory.sol";
 import {LoyaltyRoot} from "../src/modules/loyalty/LoyaltyRoot.sol";
+import {PointManager} from "../src/modules/loyalty/PointManager.sol";
 import {LoyaltyFactory} from "../src/modules/loyalty/LoyaltyFactory.sol";
 
 import {ModuleKeys} from "../src/core/constants/ModuleKeys.sol";
@@ -31,6 +33,18 @@ contract PCManagerV2 is PCManager {
     }
 }
 
+contract POSManagerV2 is POSManager {
+    function tripleOrders() external {
+        totalOrders = totalOrders * 3;
+    }
+}
+
+contract PointManagerV2 is PointManager {
+    function resetPoints(address user) external {
+        userPoints[user] = 0;
+    }
+}
+
 contract DeployAndTestAllTest is Test {
     SystemAccessControl sacProxy;
     OrganizationManager omProxy;
@@ -39,6 +53,8 @@ contract DeployAndTestAllTest is Test {
 
     UpgradeableBeacon pcManagerBeacon;
     UpgradeableBeacon accountManagerBeacon;
+    UpgradeableBeacon posManagerBeacon;
+    UpgradeableBeacon pointManagerBeacon;
 
     address deployer = address(0x1);
     address orgOwner = address(0x2);
@@ -101,22 +117,25 @@ contract DeployAndTestAllTest is Test {
         // Deploy Sub-contracts Beacons
         pcManagerBeacon = new UpgradeableBeacon(address(new PCManager()), deployer);
         accountManagerBeacon = new UpgradeableBeacon(address(new AccountManager()), deployer);
+        posManagerBeacon = new UpgradeableBeacon(address(new POSManager()), deployer);
+        pointManagerBeacon = new UpgradeableBeacon(address(new PointManager()), deployer);
 
         MeosFactory meosFactory = new MeosFactory(
             address(meosBeacon),
             address(pcManagerBeacon),
-            address(accountManagerBeacon)
+            address(accountManagerBeacon),
+            address(bmmProxy)
         );
 
         // IQR
         IqrRoot iqrImpl = new IqrRoot();
         UpgradeableBeacon iqrBeacon = new UpgradeableBeacon(address(iqrImpl), deployer);
-        IqrFactory iqrFactory = new IqrFactory(address(iqrBeacon));
+        IqrFactory iqrFactory = new IqrFactory(address(iqrBeacon), address(posManagerBeacon), address(bmmProxy));
 
         // LOYALTY
         LoyaltyRoot loyaltyImpl = new LoyaltyRoot();
         UpgradeableBeacon loyaltyBeacon = new UpgradeableBeacon(address(loyaltyImpl), deployer);
-        LoyaltyFactory loyaltyFactory = new LoyaltyFactory(address(loyaltyBeacon));
+        LoyaltyFactory loyaltyFactory = new LoyaltyFactory(address(loyaltyBeacon), address(pointManagerBeacon), address(bmmProxy));
 
         // 8. Register Modules in ModuleRegistry
         mrProxy.registerModule(ModuleKeys.MODULE_MEOS, "MEOS", address(meosFactory));
@@ -180,16 +199,13 @@ contract DeployAndTestAllTest is Test {
         assertTrue(branch1PC != address(0), "Branch 1 PCManager must be deployed");
         assertTrue(branch1Acc != address(0), "Branch 1 AccountManager must be deployed");
 
-        console2.log("--- TEST SUCCESSFUL ---");
-        console2.log("Branch 1 (Full Modules):");
-        console2.log("  - MEOS Root Proxy:", branch1Meos);
-        console2.log("  - IQR Root Proxy :", branch1Iqr);
-        console2.log("  - LOYALTY Root Proxy:", branch1Loyalty);
+        // Verify sub-contracts inside Iqr and Loyalty are deployed
+        address branch1POS = IqrRoot(branch1Iqr).posManager();
+        address branch1Point = LoyaltyRoot(branch1Loyalty).pointManager();
+        assertTrue(branch1POS != address(0), "Branch 1 POSManager must be deployed");
+        assertTrue(branch1Point != address(0), "Branch 1 PointManager must be deployed");
 
-        console2.log("Branch 2 (MEOS + LOYALTY):");
-        console2.log("  - MEOS Root Proxy:", branch2Meos);
-        console2.log("  - IQR Root Proxy :", branch2Iqr);
-        console2.log("  - LOYALTY Root Proxy:", branch2Loyalty);
+        console2.log("--- TEST SUCCESSFUL ---");
     }
 
     function test_UpgradePCManagerFlow() public {
@@ -221,9 +237,43 @@ contract DeployAndTestAllTest is Test {
         // 6. Kết quả nhân đôi thành công = 2
         assertEq(PCManagerV2(pcManagerProxy).activePCs(), 2);
 
-        console2.log("--- UPGRADE TEST PASSED ---");
-        console2.log("Old Proxy Address PCManager:", pcManagerProxy);
-        console2.log("activePCs value after doublePCs V2 logic:", PCManagerV2(pcManagerProxy).activePCs());
+        console2.log("--- UPGRADE PC TEST PASSED ---");
+        vm.stopPrank();
+    }
+
+    function test_UpgradePOSAndPointManagers() public {
+        vm.startPrank(deployer);
+
+        bytes32[] memory orgModules = new bytes32[](2);
+        orgModules[0] = ModuleKeys.MODULE_IQR;
+        orgModules[1] = ModuleKeys.MODULE_LOYALTY;
+        uint256 orgId = omProxy.createOrganization(orgOwner, orgModules);
+        uint256 branchId = omProxy.createBranch(orgId, orgModules);
+
+        address iqrRoot = bmmProxy.getModuleRoot(branchId, ModuleKeys.MODULE_IQR);
+        address loyaltyRoot = bmmProxy.getModuleRoot(branchId, ModuleKeys.MODULE_LOYALTY);
+
+        address posManagerProxy = IqrRoot(iqrRoot).posManager();
+        address pointManagerProxy = LoyaltyRoot(loyaltyRoot).pointManager();
+
+        // Check original functions
+        POSManager(posManagerProxy).createOrder();
+        assertEq(POSManager(posManagerProxy).totalOrders(), 1);
+
+        PointManager(pointManagerProxy).addPoints(address(0x123), 100);
+        assertEq(PointManager(pointManagerProxy).userPoints(address(0x123)), 100);
+
+        // Upgrade POSManager
+        posManagerBeacon.upgradeTo(address(new POSManagerV2()));
+        POSManagerV2(posManagerProxy).tripleOrders();
+        assertEq(POSManagerV2(posManagerProxy).totalOrders(), 3);
+
+        // Upgrade PointManager
+        pointManagerBeacon.upgradeTo(address(new PointManagerV2()));
+        PointManagerV2(pointManagerProxy).resetPoints(address(0x123));
+        assertEq(PointManagerV2(pointManagerProxy).userPoints(address(0x123)), 0);
+
+        console2.log("--- UPGRADE POS/POINT TEST PASSED ---");
         vm.stopPrank();
     }
 
@@ -268,6 +318,28 @@ contract DeployAndTestAllTest is Test {
 
         AccountManager(accountManagerProxy).registerUser("user2", address(0x456));
         assertEq(AccountManager(accountManagerProxy).usernameToWallet("user2"), address(0x456));
+
+        vm.stopPrank();
+    }
+
+    function test_RevertAttackerDeployDirectly() public {
+        address attacker = address(0x666);
+        vm.startPrank(attacker);
+
+        // MEOS Factory deployment directly should fail
+        address meosFactory = mrProxy.getModuleFactory(ModuleKeys.MODULE_MEOS);
+        vm.expectRevert("Only BranchModuleManager");
+        MeosFactory(meosFactory).deployModule(1, 1, address(0xabc));
+
+        // IQR Factory deployment directly should fail
+        address iqrFactory = mrProxy.getModuleFactory(ModuleKeys.MODULE_IQR);
+        vm.expectRevert("Only BranchModuleManager");
+        IqrFactory(iqrFactory).deployModule(1, 1, address(0xabc));
+
+        // Loyalty Factory deployment directly should fail
+        address loyaltyFactory = mrProxy.getModuleFactory(ModuleKeys.MODULE_LOYALTY);
+        vm.expectRevert("Only BranchModuleManager");
+        LoyaltyFactory(loyaltyFactory).deployModule(1, 1, address(0xabc));
 
         vm.stopPrank();
     }

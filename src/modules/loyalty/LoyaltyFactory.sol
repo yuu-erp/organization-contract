@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IModuleFactory} from "../../core/interfaces/IModuleFactory.sol";
 import {BranchBeaconProxy} from "../../proxies/BranchBeaconProxy.sol";
+import {LoyaltyRoot} from "./LoyaltyRoot.sol";
 
 /**
  * @title LoyaltyFactory
@@ -10,9 +11,13 @@ import {BranchBeaconProxy} from "../../proxies/BranchBeaconProxy.sol";
  */
 contract LoyaltyFactory is IModuleFactory {
     address public beacon;
+    address public pointManagerBeacon;
+    address public branchModuleManager;
 
-    constructor(address _beacon) {
+    constructor(address _beacon, address _pointManagerBeacon, address _branchModuleManager) {
         beacon = _beacon;
+        pointManagerBeacon = _pointManagerBeacon;
+        branchModuleManager = _branchModuleManager;
     }
 
     function deployModule(
@@ -20,11 +25,10 @@ contract LoyaltyFactory is IModuleFactory {
         uint256 orgId,
         address staffManager
     ) external returns (address moduleRoot) {
-        bytes memory initData = abi.encodeWithSignature(
-            "initialize(uint256,uint256,address)",
-            branchId,
-            orgId,
-            staffManager
+        require(msg.sender == branchModuleManager, "Only BranchModuleManager");
+        bytes memory initData = abi.encodeCall(
+            LoyaltyRoot.initialize,
+            (branchId, orgId, staffManager, pointManagerBeacon, branchModuleManager)
         );
         moduleRoot = address(new BranchBeaconProxy(beacon, initData, branchId, orgId));
     }
