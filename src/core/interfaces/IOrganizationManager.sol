@@ -6,24 +6,19 @@ interface IOrganizationManager {
      * @dev Phát ra khi Organization được tạo.
      */
     event OrganizationCreated(
-        uint256 indexed organizationId,
+        uint48 indexed organizationId,
         address indexed owner
     );
 
     /**
      * @dev Phát ra khi Branch được tạo.
      */
-    event BranchCreated(
-        uint256 indexed branchId,
-        uint256 indexed organizationId
-    );
+    event BranchCreated(uint48 indexed branchId, uint48 indexed organizationId);
 
     error InvalidAddress();
     error Unauthorized();
-
     error OrganizationNotFound();
     error OrganizationAlreadyExists();
-
     error BranchNotFound();
 
     /**
@@ -32,15 +27,15 @@ interface IOrganizationManager {
     function createOrganization(
         address owner,
         bytes32[] calldata moduleKeys
-    ) external returns (uint256 organizationId);
+    ) external returns (uint48 organizationId);
 
     /**
      * @dev Tạo mới Branch cho Organization kèm danh sách module cần kích hoạt.
      */
     function createBranch(
-        uint256 organizationId,
+        uint48 organizationId,
         bytes32[] calldata moduleKeysToEnable
-    ) external returns (uint256 branchId);
+    ) external returns (uint48 branchId);
 
     /**
      * @dev Cập nhật địa chỉ ModuleRegistry và BranchModuleManager.
@@ -55,31 +50,29 @@ interface IOrganizationManager {
      */
     function getOrganizationIdByOwner(
         address owner
-    ) external view returns (uint256);
+    ) external view returns (uint48);
 
     /**
      * @dev Trả về danh sách branchId thuộc Organization.
      */
     function getOrganizationBranches(
-        uint256 organizationId
-    ) external view returns (uint256[] memory);
+        uint48 organizationId
+    ) external view returns (uint48[] memory);
 
     /**
      * @dev Kiểm tra Organization tồn tại.
      */
     function organizationExists(
-        uint256 organizationId
+        uint48 organizationId
     ) external view returns (bool);
 
     /**
      * @dev Trả về organizationId của branch.
      */
-    function getBranchOrgId(
-        uint256 branchId
-    ) external view returns (uint256);
+    function getBranchOrgId(uint48 branchId) external view returns (uint48);
 
     /**
      * @dev Kiểm tra Branch tồn tại.
      */
-    function branchExists(uint256 branchId) external view returns (bool);
+    function branchExists(uint48 branchId) external view returns (bool);
 }

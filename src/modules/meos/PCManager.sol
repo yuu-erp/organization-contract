@@ -12,8 +12,8 @@ contract PCManager is BranchContextUpgradeable {
     uint256 public activePCs;
 
     function initialize(
-        uint256 _branchId,
-        uint256 _orgId,
+        uint48 _branchId,
+        uint48 _orgId,
         address _branchModuleManager
     ) external initializer {
         __BranchContext_init(_branchId, _orgId, _branchModuleManager);

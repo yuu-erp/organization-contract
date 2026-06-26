@@ -19,12 +19,12 @@ import {BranchModuleManagerStorage} from "./storage/BranchModuleManagerStorage.s
 
 /**
  * @title BranchModuleManager
- * @dev Orchestrator chính: provision branch, deploy shared services và module bundles.
+ * @dev Orchestrator chính: provision branch, deploy shared services và module bundles. (Đã đồng bộ uint48)
  *
- *      Flow:
- *      1. provisionBranch(branchId, orgId) → deploy BranchStaffManager
- *      2. enableModule(branchId, moduleKey) → gọi factory deploy module bundle
- *      3. disableModule(branchId, moduleKey) → soft disable
+ * Flow:
+ * 1. provisionBranch(branchId, orgId) → deploy BranchStaffManager
+ * 2. enableModule(branchId, moduleKey) → gọi factory deploy module bundle
+ * 3. disableModule(branchId, moduleKey) → soft disable
  */
 contract BranchModuleManager is
     Initializable,
@@ -41,10 +41,6 @@ contract BranchModuleManager is
 
     /**
      * @dev Khởi tạo contract.
-     * @param accessControlAddress Địa chỉ SystemAccessControl
-     * @param organizationManagerAddress Địa chỉ OrganizationManager proxy
-     * @param moduleRegistryAddress Địa chỉ ModuleRegistry proxy
-     * @param staffManagerBeaconAddress Địa chỉ Beacon cho BranchStaffManager
      */
     function initialize(
         address accessControlAddress,
@@ -62,9 +58,7 @@ contract BranchModuleManager is
         }
 
         accessControl = ISystemAccessControl(accessControlAddress);
-        organizationManager = IOrganizationManager(
-            organizationManagerAddress
-        );
+        organizationManager = IOrganizationManager(organizationManagerAddress);
         moduleRegistry = IModuleRegistry(moduleRegistryAddress);
         staffManagerBeacon = staffManagerBeaconAddress;
     }
@@ -84,11 +78,11 @@ contract BranchModuleManager is
 
     /**
      * @dev Provision branch: deploy BranchStaffManager (shared service).
-     *      Phải gọi trước khi enableModule.
+     * Phải gọi trước khi enableModule.
      */
     function provisionBranch(
-        uint256 branchId,
-        uint256 orgId
+        uint48 branchId,
+        uint48 orgId
     ) external onlyPlatformAdmin {
         // Validate branch exists
         if (!organizationManager.branchExists(branchId)) {
@@ -100,11 +94,12 @@ contract BranchModuleManager is
         }
 
         // Deploy BranchStaffManager via Beacon Proxy
+        // CHÚ Ý: Đã cập nhật signature thành uint48 để khớp với kiến trúc mới
         address staffManager = address(
             new BeaconProxy(
                 staffManagerBeacon,
                 abi.encodeWithSignature(
-                    "initialize(uint256,address)",
+                    "initialize(uint48,address)",
                     branchId,
                     address(accessControl)
                 )
@@ -119,10 +114,10 @@ contract BranchModuleManager is
 
     /**
      * @dev Enable module cho branch.
-     *      Gọi factory tương ứng để deploy toàn bộ module bundle.
+     * Gọi factory tương ứng để deploy toàn bộ module bundle.
      */
     function enableModule(
-        uint256 branchId,
+        uint48 branchId,
         bytes32 moduleKey
     ) external onlyPlatformAdmin returns (address moduleRoot) {
         if (!branchProvisioned[branchId]) {
@@ -133,8 +128,8 @@ contract BranchModuleManager is
             revert ModuleAlreadyEnabled();
         }
 
-        // Lấy orgId từ branch
-        uint256 orgId = organizationManager.getBranchOrgId(branchId);
+        // Lấy orgId từ branch (Đã cập nhật type uint48)
+        uint48 orgId = organizationManager.getBranchOrgId(branchId);
 
         // Check org đã subscribe module này chưa
         if (!moduleRegistry.isOrgSubscribed(orgId, moduleKey)) {
@@ -167,7 +162,7 @@ contract BranchModuleManager is
      * @dev Disable module (soft — giữ data, chỉ remove khỏi enabled set).
      */
     function disableModule(
-        uint256 branchId,
+        uint48 branchId,
         bytes32 moduleKey
     ) external onlyPlatformAdmin {
         if (!branchEnabledModules[branchId].contains(moduleKey)) {
@@ -186,9 +181,7 @@ contract BranchModuleManager is
     /**
      * @dev Kiểm tra branch đã provision chưa.
      */
-    function isBranchProvisioned(
-        uint256 branchId
-    ) external view returns (bool) {
+    function isBranchProvisioned(uint48 branchId) external view returns (bool) {
         return branchProvisioned[branchId];
     }
 
@@ -196,7 +189,7 @@ contract BranchModuleManager is
      * @dev Lấy StaffManager address.
      */
     function getBranchStaffManager(
-        uint256 branchId
+        uint48 branchId
     ) external view returns (address) {
         return branchStaffManagers[branchId];
     }
@@ -205,7 +198,7 @@ contract BranchModuleManager is
      * @dev Lấy module root address.
      */
     function getModuleRoot(
-        uint256 branchId,
+        uint48 branchId,
         bytes32 moduleKey
     ) external view returns (address) {
         return branchModuleRoots[branchId][moduleKey];
@@ -215,12 +208,8 @@ contract BranchModuleManager is
      * @dev Lấy danh sách module keys + addresses đang enabled của branch.
      */
     function getBranchModules(
-        uint256 branchId
-    )
-        external
-        view
-        returns (bytes32[] memory keys, address[] memory roots)
-    {
+        uint48 branchId
+    ) external view returns (bytes32[] memory keys, address[] memory roots) {
         EnumerableSet.Bytes32Set storage modules = branchEnabledModules[
             branchId
         ];
@@ -240,7 +229,7 @@ contract BranchModuleManager is
      * @dev Kiểm tra module đang enabled cho branch không.
      */
     function isModuleEnabled(
-        uint256 branchId,
+        uint48 branchId,
         bytes32 moduleKey
     ) external view returns (bool) {
         return branchEnabledModules[branchId].contains(moduleKey);
@@ -251,9 +240,7 @@ contract BranchModuleManager is
     /**
      * @dev Chỉ DEFAULT_ADMIN mới được nâng cấp.
      */
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override {
+    function _authorizeUpgrade(address newImplementation) internal override {
         if (!accessControl.hasRole(RoleHashes.DEFAULT_ADMIN_ROLE, msg.sender)) {
             revert Unauthorized();
         }

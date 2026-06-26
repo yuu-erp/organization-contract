@@ -19,9 +19,9 @@ import {ModuleRegistryStorage} from "./storage/ModuleRegistryStorage.sol";
  * @title ModuleRegistry
  * @dev Trung tâm đăng ký module và quản lý subscription cho Organization.
  *
- *      - OPS_ADMIN đăng ký module mới (registerModule)
- *      - PLATFORM_ADMIN kích hoạt module cho org (subscribeOrgToModule)
- *      - BranchModuleManager query factory address để deploy
+ * - OPS_ADMIN đăng ký module mới (registerModule)
+ * - PLATFORM_ADMIN kích hoạt module cho org (subscribeOrgToModule)
+ * - BranchModuleManager query factory address để deploy
  */
 contract ModuleRegistry is
     Initializable,
@@ -70,7 +70,7 @@ contract ModuleRegistry is
 
     /**
      * @dev Đăng ký module mới vào hệ thống.
-     *      Chỉ OPS_ADMIN mới được gọi.
+     * Chỉ OPS_ADMIN mới được gọi.
      */
     function registerModule(
         bytes32 key,
@@ -133,7 +133,7 @@ contract ModuleRegistry is
      * @dev Kích hoạt module cho Organization.
      */
     function subscribeOrgToModule(
-        uint256 orgId,
+        uint48 orgId,
         bytes32 moduleKey
     ) external onlyPlatformAdmin {
         _requireModuleExists(moduleKey);
@@ -155,7 +155,7 @@ contract ModuleRegistry is
      * @dev Huỷ đăng ký module cho Organization.
      */
     function unsubscribeOrgFromModule(
-        uint256 orgId,
+        uint48 orgId,
         bytes32 moduleKey
     ) external onlyPlatformAdmin {
         if (!orgSubscribedModules[orgId].contains(moduleKey)) {
@@ -173,7 +173,7 @@ contract ModuleRegistry is
      * @dev Kiểm tra org đã subscribe module chưa.
      */
     function isOrgSubscribed(
-        uint256 orgId,
+        uint48 orgId,
         bytes32 moduleKey
     ) external view returns (bool) {
         return orgSubscribedModules[orgId].contains(moduleKey);
@@ -183,7 +183,7 @@ contract ModuleRegistry is
      * @dev Lấy danh sách module keys mà org đã subscribe.
      */
     function getOrgModules(
-        uint256 orgId
+        uint48 orgId
     ) external view returns (bytes32[] memory keys) {
         EnumerableSet.Bytes32Set storage modules = orgSubscribedModules[orgId];
         uint256 length = modules.length();
@@ -234,9 +234,7 @@ contract ModuleRegistry is
     /**
      * @dev Chỉ DEFAULT_ADMIN mới được nâng cấp.
      */
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override {
+    function _authorizeUpgrade(address newImplementation) internal override {
         if (!accessControl.hasRole(RoleHashes.DEFAULT_ADMIN_ROLE, msg.sender)) {
             revert Unauthorized();
         }

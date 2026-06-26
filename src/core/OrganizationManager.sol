@@ -20,7 +20,7 @@ import {OrganizationManagerStorage} from "./storage/OrganizationManagerStorage.s
 
 /**
  * @title OrganizationManager
- * @dev Quản lý vòng đời Organization và Branch của nền tảng.
+ * @dev Quản lý vòng đời Organization và Branch của nền tảng (Đã tối ưu Storage Packing).
  */
 contract OrganizationManager is
     Initializable,
@@ -56,7 +56,6 @@ contract OrganizationManager is
         ) {
             revert Unauthorized();
         }
-
         _;
     }
 
@@ -66,7 +65,7 @@ contract OrganizationManager is
     function createOrganization(
         address owner,
         bytes32[] calldata moduleKeys
-    ) external onlyPlatformAdmin returns (uint256 organizationId) {
+    ) external onlyPlatformAdmin returns (uint48 organizationId) {
         if (owner == address(0)) {
             revert InvalidAddress();
         }
@@ -78,8 +77,8 @@ contract OrganizationManager is
         organizationId = ++organizationCounter;
 
         organizations[organizationId] = OrganizationTypes.Organization({
-            id: organizationId,
             owner: owner,
+            id: organizationId,
             active: true,
             exists: true
         });
@@ -103,16 +102,16 @@ contract OrganizationManager is
      * @dev Tạo mới Branch cho Organization kèm kích hoạt module.
      */
     function createBranch(
-        uint256 organizationId,
+        uint48 organizationId,
         bytes32[] calldata moduleKeysToEnable
-    ) external onlyPlatformAdmin returns (uint256 branchId) {
+    ) external onlyPlatformAdmin returns (uint48 branchId) {
         _requireOrganizationExists(organizationId);
 
         branchId = ++branchCounter;
 
         branches[branchId] = BranchTypes.Branch({
-            organizationId: organizationId,
             owner: address(0),
+            organizationId: organizationId,
             active: true,
             exists: true
         });
@@ -144,7 +143,9 @@ contract OrganizationManager is
         address _moduleRegistry,
         address _branchModuleManager
     ) external onlyPlatformAdmin {
-        if (_moduleRegistry == address(0) || _branchModuleManager == address(0)) {
+        if (
+            _moduleRegistry == address(0) || _branchModuleManager == address(0)
+        ) {
             revert InvalidAddress();
         }
         moduleRegistry = _moduleRegistry;
@@ -156,7 +157,7 @@ contract OrganizationManager is
      */
     function getOrganizationIdByOwner(
         address owner
-    ) external view returns (uint256) {
+    ) external view returns (uint48) {
         return ownerToOrganizationId[owner];
     }
 
@@ -164,8 +165,8 @@ contract OrganizationManager is
      * @dev Trả về danh sách Branch thuộc Organization.
      */
     function getOrganizationBranches(
-        uint256 organizationId
-    ) external view returns (uint256[] memory branchIds) {
+        uint48 organizationId
+    ) external view returns (uint48[] memory branchIds) {
         _requireOrganizationExists(organizationId);
 
         EnumerableSet.UintSet storage branchesSet = organizationBranches[
@@ -173,11 +174,11 @@ contract OrganizationManager is
         ];
 
         uint256 length = branchesSet.length();
-
-        branchIds = new uint256[](length);
+        branchIds = new uint48[](length);
 
         for (uint256 i; i < length; i++) {
-            branchIds[i] = branchesSet.at(i);
+            // Ép kiểu an toàn từ uint256 xuống uint48
+            branchIds[i] = uint48(branchesSet.at(i));
         }
     }
 
@@ -185,7 +186,7 @@ contract OrganizationManager is
      * @dev Kiểm tra Organization tồn tại.
      */
     function organizationExists(
-        uint256 organizationId
+        uint48 organizationId
     ) external view returns (bool) {
         return organizations[organizationId].exists;
     }
@@ -193,23 +194,21 @@ contract OrganizationManager is
     /**
      * @dev Trả về organizationId của branch.
      */
-    function getBranchOrgId(
-        uint256 branchId
-    ) external view returns (uint256) {
+    function getBranchOrgId(uint48 branchId) external view returns (uint48) {
         return branches[branchId].organizationId;
     }
 
     /**
      * @dev Kiểm tra Branch tồn tại.
      */
-    function branchExists(uint256 branchId) external view returns (bool) {
+    function branchExists(uint48 branchId) external view returns (bool) {
         return branches[branchId].exists;
     }
 
     /**
      * @dev Validate Organization tồn tại.
      */
-    function _requireOrganizationExists(uint256 organizationId) internal view {
+    function _requireOrganizationExists(uint48 organizationId) internal view {
         if (!organizations[organizationId].exists) {
             revert OrganizationNotFound();
         }
@@ -218,7 +217,7 @@ contract OrganizationManager is
     /**
      * @dev Validate Branch tồn tại.
      */
-    function _requireBranchExists(uint256 branchId) internal view {
+    function _requireBranchExists(uint48 branchId) internal view {
         if (!branches[branchId].exists) {
             revert BranchNotFound();
         }

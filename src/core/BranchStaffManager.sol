@@ -8,10 +8,18 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @dev Hợp đồng con quản lý nhân sự tại chi nhánh (shared service).
  */
 contract BranchStaffManager is Initializable {
-    uint256 public branchId;
-    address public accessControl;
+    // --- Tối ưu Storage Packing (208/256 bits) ---
+    address public accessControl; // 160 bits
+    uint48 public branchId; // 48 bits
 
-    function initialize(uint256 _branchId, address _accessControl) external initializer {
+    /**
+     * @dev Khởi tạo contract thông qua BeaconProxy
+     * Lưu ý: Signature phải khớp chính xác với abi.encodeWithSignature("initialize(uint48,address)", ...)
+     */
+    function initialize(
+        uint48 _branchId,
+        address _accessControl
+    ) external initializer {
         branchId = _branchId;
         accessControl = _accessControl;
     }

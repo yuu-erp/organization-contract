@@ -10,22 +10,33 @@ import {IBranchModuleManager} from "../../core/interfaces/IBranchModuleManager.s
  *      giúp tái sử dụng thông tin context của Chi nhánh và Tổ chức.
  */
 abstract contract BranchContextUpgradeable is Initializable {
-    uint256 public branchId;
-    uint256 public orgId;
+    // Tối ưu Gas: Pack 3 biến vào chung 1 Storage Slot (256 bits)
+    // - address: 160 bits
+    // - uint48 (orgId): 48 bits
+    // - uint48 (branchId): 48 bits
+    // Tổng cộng: 256 bits (vừa vặn 1 Slot)
+
     address public branchModuleManager;
+    uint48 public orgId;
+    uint48 public branchId;
 
     error ModuleDisabled();
 
     modifier onlyIfModuleEnabled(bytes32 moduleKey) {
-        if (!IBranchModuleManager(branchModuleManager).isModuleEnabled(branchId, moduleKey)) {
+        if (
+            !IBranchModuleManager(branchModuleManager).isModuleEnabled(
+                branchId,
+                moduleKey
+            )
+        ) {
             revert ModuleDisabled();
         }
         _;
     }
 
     function __BranchContext_init(
-        uint256 _branchId,
-        uint256 _orgId,
+        uint48 _branchId,
+        uint48 _orgId,
         address _branchModuleManager
     ) internal onlyInitializing {
         branchId = _branchId;

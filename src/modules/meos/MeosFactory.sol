@@ -8,6 +8,7 @@ import {MeosRoot} from "./MeosRoot.sol";
 /**
  * @title MeosFactory
  * @dev Factory để deploy module MEOS sử dụng BranchBeaconProxy.
+ * Đã đồng bộ kiểu dữ liệu uint48 cho định danh Branch và Org.
  */
 contract MeosFactory is IModuleFactory {
     address public beacon;
@@ -33,10 +34,12 @@ contract MeosFactory is IModuleFactory {
     }
 
     function deployModule(
-        uint256 branchId,
-        uint256 orgId,
+        uint48 branchId,
+        uint48 orgId,
         address staffManager
     ) external onlyBranchModuleManager returns (address moduleRoot) {
+        // LƯU Ý: Để hàm abi.encodeCall này không báo lỗi,
+        // hàm initialize trong contract MeosRoot.sol cũng BẮT BUỘC phải đổi sang uint48.
         bytes memory initData = abi.encodeCall(
             MeosRoot.initialize,
             (
@@ -48,6 +51,7 @@ contract MeosFactory is IModuleFactory {
                 msg.sender
             )
         );
+
         moduleRoot = address(
             new BranchBeaconProxy(beacon, initData, branchId, orgId)
         );

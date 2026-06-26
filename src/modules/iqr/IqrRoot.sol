@@ -10,15 +10,15 @@ import {POSManager} from "./POSManager.sol";
  * @dev Hợp đồng chính (root) cho module IQR.
  */
 contract IqrRoot is Initializable {
-    uint256 public branchId;
-    uint256 public orgId;
+    uint48 public branchId;
+    uint48 public orgId;
     address public staffManager;
     address public posManager;
     address public branchModuleManager;
 
     function initialize(
-        uint256 _branchId,
-        uint256 _orgId,
+        uint48 _branchId,
+        uint48 _orgId,
         address _staffManager,
         address _posManagerBeacon,
         address _branchModuleManager
@@ -28,10 +28,15 @@ contract IqrRoot is Initializable {
         staffManager = _staffManager;
         branchModuleManager = _branchModuleManager;
 
-        posManager = address(new BeaconProxy(
-            _posManagerBeacon,
-            abi.encodeCall(POSManager.initialize, (_branchId, _orgId, _branchModuleManager))
-        ));
+        posManager = address(
+            new BeaconProxy(
+                _posManagerBeacon,
+                abi.encodeCall(
+                    POSManager.initialize,
+                    (_branchId, _orgId, _branchModuleManager)
+                )
+            )
+        );
     }
 
     function getSubContracts() external view returns (address _posManager) {

@@ -8,48 +8,61 @@ import {AccountManager} from "./AccountManager.sol";
 
 /**
  * @title MeosRoot
- * @dev Hợp đồng chính (root) cho module MEOS.
+ * @dev Hợp đồng chính (root) cho module MEOS. Đã tối ưu Storage.
  */
 contract MeosRoot is Initializable {
-    uint256 public branchId;
-    uint256 public orgId;
-    address public staffManager;
+    // --- Tối ưu Storage Packing (Gom vừa khít 1 Slot 256 bits) ---
+    address public staffManager; // 160 bits
+    uint48 public branchId; // 48 bits
+    uint48 public orgId; // 48 bits
+
+    // Các biến còn lại chiếm các slot riêng biệt
     address public pcManager;
     address public accountManager;
-
     address public branchModuleManager;
 
     function initialize(
-        uint256 _branchId,
-        uint256 _orgId,
+        uint48 _branchId,
+        uint48 _orgId,
         address _staffManager,
         address _pcManagerBeacon,
         address _accountManagerBeacon,
         address _branchModuleManager
     ) external initializer {
+        staffManager = _staffManager;
         branchId = _branchId;
         orgId = _orgId;
-        staffManager = _staffManager;
         branchModuleManager = _branchModuleManager;
-        
+
         // Deploy các contract con dưới dạng Beacon Proxy
-        pcManager = address(new BeaconProxy(
-            _pcManagerBeacon,
-            abi.encodeCall(PCManager.initialize, (_branchId, _orgId, _branchModuleManager))
-        ));
-        accountManager = address(new BeaconProxy(
-            _accountManagerBeacon,
-            abi.encodeCall(AccountManager.initialize, (_branchId, _orgId, _branchModuleManager))
-        ));
+        pcManager = address(
+            new BeaconProxy(
+                _pcManagerBeacon,
+                abi.encodeCall(
+                    PCManager.initialize,
+                    (_branchId, _orgId, _branchModuleManager)
+                )
+            )
+        );
+        accountManager = address(
+            new BeaconProxy(
+                _accountManagerBeacon,
+                abi.encodeCall(
+                    AccountManager.initialize,
+                    (_branchId, _orgId, _branchModuleManager)
+                )
+            )
+        );
     }
 
     /**
      * @dev Trả về danh sách các contract con thuộc module MEOS.
      */
-    function getSubContracts() external view returns (
-        address _pcManager,
-        address _accountManager
-    ) {
+    function getSubContracts()
+        external
+        view
+        returns (address _pcManager, address _accountManager)
+    {
         return (pcManager, accountManager);
     }
 }

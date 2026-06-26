@@ -1,10 +1,39 @@
 {
-  "system_contracts": {"branch_module_manager":"0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e","module_registry":"0xa513E6E4b8f2a923D98304ec87F64353C4D5C853","organization_manager":"0x5FC8d32690cc91D4c39d9d3abcBD16989F875707","system_access_control":"0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"},
+  "system_contracts": {
+    "branch_module_manager": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+    "module_registry": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+    "organization_manager": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+    "system_access_control": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+  },
   "organization": {
     "id": 1,
     "branches": [
-      {"id":1,"modules":{"IQR":"0xf3eE3C4Ec25e8414838567818A30C90c7d62f834","LOYALTY":"0xfBD745797A0fb50429f0a2b04581092798Fdf30B","MEOS":{"AccountManager":"0x11eCcC695896287b3Dd12CF9d12ec476fa2071eD","PCManager":"0x2408AfBfa81775DF2Eb9D0c108d1150A16E1872a","root":"0xCe85503De9399D4dECa3c0b2bb3e9e7CFCBf9C6B"}},"name":"Branch 1 (Full Modules)"},
-      {"id":2,"modules":{"IQR":"0x0000000000000000000000000000000000000000","LOYALTY":"0x8Ba41269ed69496c07bea886c300016A0BA8FB5E","MEOS":{"AccountManager":"0xcac1AB071344A6352815c83aa463F2AE0DDAB8DD","PCManager":"0x181a84Acdd26cA0140A3858b99bB535beA048801","root":"0x18998c7E38ede4dF09cEec08E5372Bf8fe5719ea"}},"name":"Branch 2 (MEOS + LOYALTY)"}
+      {
+        "id": 1,
+        "modules": {
+          "IQR": "0xf3eE3C4Ec25e8414838567818A30C90c7d62f834",
+          "LOYALTY": "0xfBD745797A0fb50429f0a2b04581092798Fdf30B",
+          "MEOS": {
+            "AccountManager": "0x11eCcC695896287b3Dd12CF9d12ec476fa2071eD",
+            "PCManager": "0x2408AfBfa81775DF2Eb9D0c108d1150A16E1872a",
+            "root": "0xCe85503De9399D4dECa3c0b2bb3e9e7CFCBf9C6B"
+          }
+        },
+        "name": "Branch 1 (Full Modules)"
+      },
+      {
+        "id": 2,
+        "modules": {
+          "IQR": "0x0000000000000000000000000000000000000000",
+          "LOYALTY": "0x8Ba41269ed69496c07bea886c300016A0BA8FB5E",
+          "MEOS": {
+            "AccountManager": "0xcac1AB071344A6352815c83aa463F2AE0DDAB8DD",
+            "PCManager": "0x181a84Acdd26cA0140A3858b99bB535beA048801",
+            "root": "0x18998c7E38ede4dF09cEec08E5372Bf8fe5719ea"
+          }
+        },
+        "name": "Branch 2 (MEOS + LOYALTY)"
+      }
     ]
   }
 }

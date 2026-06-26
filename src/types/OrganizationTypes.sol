@@ -4,16 +4,16 @@ pragma solidity ^0.8.20;
 /**
  * @title OrganizationTypes
  * @dev Centralized type definitions for Organization domain
- *      Used across OrganizationManager, storage, and related modules
  */
 library OrganizationTypes {
     /**
-     * @dev Core Organization entity
+     * @dev Core Organization entity (Packed to 1 Storage Slot)
      */
     struct Organization {
-        uint256 id;
-        address owner;
-        bool active;
-        bool exists;
+        address owner; // 160 bits
+        uint48 id; // 48 bits
+        bool active; // 8 bits
+        bool exists; // 8 bits
+        // Total: 224 bits
     }
 }

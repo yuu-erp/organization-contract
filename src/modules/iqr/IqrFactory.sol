@@ -14,22 +14,34 @@ contract IqrFactory is IModuleFactory {
     address public posManagerBeacon;
     address public branchModuleManager;
 
-    constructor(address _beacon, address _posManagerBeacon, address _branchModuleManager) {
+    constructor(
+        address _beacon,
+        address _posManagerBeacon,
+        address _branchModuleManager
+    ) {
         beacon = _beacon;
         posManagerBeacon = _posManagerBeacon;
         branchModuleManager = _branchModuleManager;
     }
 
     function deployModule(
-        uint256 branchId,
-        uint256 orgId,
+        uint48 branchId,
+        uint48 orgId,
         address staffManager
     ) external returns (address moduleRoot) {
         require(msg.sender == branchModuleManager, "Only BranchModuleManager");
         bytes memory initData = abi.encodeCall(
             IqrRoot.initialize,
-            (branchId, orgId, staffManager, posManagerBeacon, branchModuleManager)
+            (
+                branchId,
+                orgId,
+                staffManager,
+                posManagerBeacon,
+                branchModuleManager
+            )
         );
-        moduleRoot = address(new BranchBeaconProxy(beacon, initData, branchId, orgId));
+        moduleRoot = address(
+            new BranchBeaconProxy(beacon, initData, branchId, orgId)
+        );
     }
 }
