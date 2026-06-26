@@ -16,26 +16,17 @@ contract DeployModuleRegistry is Script {
 
         ModuleRegistry implementation = new ModuleRegistry();
 
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            abi.encodeCall(ModuleRegistry.initialize, (accessControl))
-        );
+        ERC1967Proxy proxy =
+            new ERC1967Proxy(address(implementation), abi.encodeCall(ModuleRegistry.initialize, (accessControl)));
 
         vm.stopBroadcast();
 
-        console2.log(
-            "ModuleRegistry Implementation:",
-            address(implementation)
-        );
+        console2.log("ModuleRegistry Implementation:", address(implementation));
         console2.log("ModuleRegistry Proxy:", address(proxy));
 
         string memory json = "deployments";
         vm.serializeAddress(json, "implementation", address(implementation));
-        string memory finalJson = vm.serializeAddress(
-            json,
-            "proxy",
-            address(proxy)
-        );
+        string memory finalJson = vm.serializeAddress(json, "proxy", address(proxy));
 
         vm.writeJson(finalJson, "deployments/module_registry.json");
     }

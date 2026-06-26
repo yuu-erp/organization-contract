@@ -63,19 +63,32 @@ contract DeployAndTestAll is Script {
     function deploySystem(address deployer) internal returns (System memory sys) {
         // 1. Deploy SystemAccessControl (UUPS Proxy)
         SystemAccessControl sacProxy = SystemAccessControl(
-            address(new ERC1967Proxy(address(new SystemAccessControl()), abi.encodeCall(SystemAccessControl.initialize, (deployer))))
+            address(
+                new ERC1967Proxy(
+                    address(new SystemAccessControl()), abi.encodeCall(SystemAccessControl.initialize, (deployer))
+                )
+            )
         );
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, deployer);
         sacProxy.grantRole(RoleHashes.OPS_ADMIN_ROLE, deployer);
 
         // 2. Deploy OrganizationManager (UUPS Proxy)
         OrganizationManager omProxy = OrganizationManager(
-            address(new ERC1967Proxy(address(new OrganizationManager()), abi.encodeCall(OrganizationManager.initialize, (address(sacProxy)))))
+            address(
+                new ERC1967Proxy(
+                    address(new OrganizationManager()),
+                    abi.encodeCall(OrganizationManager.initialize, (address(sacProxy)))
+                )
+            )
         );
 
         // 3. Deploy ModuleRegistry (UUPS Proxy)
         ModuleRegistry mrProxy = ModuleRegistry(
-            address(new ERC1967Proxy(address(new ModuleRegistry()), abi.encodeCall(ModuleRegistry.initialize, (address(sacProxy)))))
+            address(
+                new ERC1967Proxy(
+                    address(new ModuleRegistry()), abi.encodeCall(ModuleRegistry.initialize, (address(sacProxy)))
+                )
+            )
         );
 
         // 4. Deploy BranchStaffManager implementation + UpgradeableBeacon
@@ -105,25 +118,19 @@ contract DeployAndTestAll is Script {
         {
             address pcBeacon = address(new UpgradeableBeacon(address(new PCManager()), deployer));
             address accBeacon = address(new UpgradeableBeacon(address(new AccountManager()), deployer));
-            MeosFactory meosFactory = new MeosFactory(
-                address(new UpgradeableBeacon(address(new MeosRoot()), deployer)),
-                pcBeacon,
-                accBeacon
-            );
+            MeosFactory meosFactory =
+                new MeosFactory(address(new UpgradeableBeacon(address(new MeosRoot()), deployer)), pcBeacon, accBeacon);
             mrProxy.registerModule(ModuleKeys.MODULE_MEOS, "MEOS", address(meosFactory));
         }
 
         {
-            IqrFactory iqrFactory = new IqrFactory(
-                address(new UpgradeableBeacon(address(new IqrRoot()), deployer))
-            );
+            IqrFactory iqrFactory = new IqrFactory(address(new UpgradeableBeacon(address(new IqrRoot()), deployer)));
             mrProxy.registerModule(ModuleKeys.MODULE_IQR, "IQR", address(iqrFactory));
         }
 
         {
-            LoyaltyFactory loyaltyFactory = new LoyaltyFactory(
-                address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer))
-            );
+            LoyaltyFactory loyaltyFactory =
+                new LoyaltyFactory(address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer)));
             mrProxy.registerModule(ModuleKeys.MODULE_LOYALTY, "LOYALTY", address(loyaltyFactory));
         }
 
@@ -254,12 +261,20 @@ contract DeployAndTestAll is Script {
         // Build the raw JSON string manually to prevent double-escaping
         string memory finalJson = string.concat(
             "{\n",
-            "  \"system_contracts\": ", sysFinal, ",\n",
+            "  \"system_contracts\": ",
+            sysFinal,
+            ",\n",
             "  \"organization\": {\n",
-            "    \"id\": ", vm.toString(res.orgId), ",\n",
+            "    \"id\": ",
+            vm.toString(res.orgId),
+            ",\n",
             "    \"branches\": [\n",
-            "      ", b1Final, ",\n",
-            "      ", b2Final, "\n",
+            "      ",
+            b1Final,
+            ",\n",
+            "      ",
+            b2Final,
+            "\n",
             "    ]\n",
             "  }\n",
             "}"

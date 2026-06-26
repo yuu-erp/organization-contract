@@ -79,8 +79,9 @@ contract BranchStaffManager is Initializable, IBranchStaffManager {
     ) external requiresRole(ROLE_MANAGER) {
         // Co-owner hoặc Manager mới được tạo Staff
 
-        if (moduleKeys.length != modulePermBitmasks.length)
+        if (moduleKeys.length != modulePermBitmasks.length) {
             revert Unauthorized(); // Hoặc tạo custom error LengthMismatch
+        }
 
         // 1. Cấp Role Staff và Global Perms
         staffProfiles[staff] = StaffProfile({

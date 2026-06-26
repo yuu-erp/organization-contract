@@ -75,7 +75,9 @@ contract DeployAndTestAllTest is Test {
         // 2. Deploy OrganizationManager (UUPS Proxy)
         OrganizationManager omImpl = new OrganizationManager();
         omProxy = OrganizationManager(
-            address(new ERC1967Proxy(address(omImpl), abi.encodeCall(OrganizationManager.initialize, (address(sacProxy)))))
+            address(
+                new ERC1967Proxy(address(omImpl), abi.encodeCall(OrganizationManager.initialize, (address(sacProxy))))
+            )
         );
 
         // 3. Deploy ModuleRegistry (UUPS Proxy)
@@ -121,10 +123,7 @@ contract DeployAndTestAllTest is Test {
         pointManagerBeacon = new UpgradeableBeacon(address(new PointManager()), deployer);
 
         MeosFactory meosFactory = new MeosFactory(
-            address(meosBeacon),
-            address(pcManagerBeacon),
-            address(accountManagerBeacon),
-            address(bmmProxy)
+            address(meosBeacon), address(pcManagerBeacon), address(accountManagerBeacon), address(bmmProxy)
         );
 
         // IQR
@@ -135,7 +134,8 @@ contract DeployAndTestAllTest is Test {
         // LOYALTY
         LoyaltyRoot loyaltyImpl = new LoyaltyRoot();
         UpgradeableBeacon loyaltyBeacon = new UpgradeableBeacon(address(loyaltyImpl), deployer);
-        LoyaltyFactory loyaltyFactory = new LoyaltyFactory(address(loyaltyBeacon), address(pointManagerBeacon), address(bmmProxy));
+        LoyaltyFactory loyaltyFactory =
+            new LoyaltyFactory(address(loyaltyBeacon), address(pointManagerBeacon), address(bmmProxy));
 
         // 8. Register Modules in ModuleRegistry
         mrProxy.registerModule(ModuleKeys.MODULE_MEOS, "MEOS", address(meosFactory));
@@ -233,7 +233,7 @@ contract DeployAndTestAllTest is Test {
 
         // 5. Gọi hàm mới doublePCs() trên proxy cũ
         PCManagerV2(pcManagerProxy).doublePCs();
-        
+
         // 6. Kết quả nhân đôi thành công = 2
         assertEq(PCManagerV2(pcManagerProxy).activePCs(), 2);
 

@@ -29,22 +29,11 @@ contract GrantRolesScript is Script {
         }
 
         // 5. Thực thi gán quyền PLATFORM_ADMIN_ROLE
-        if (
-            !accessControl.hasRole(
-                RoleHashes.PLATFORM_ADMIN_ROLE,
-                platformAdmin
-            )
-        ) {
-            accessControl.grantRole(
-                RoleHashes.PLATFORM_ADMIN_ROLE,
-                platformAdmin
-            );
+        if (!accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, platformAdmin)) {
+            accessControl.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, platformAdmin);
             console2.log("Granted PLATFORM_ADMIN_ROLE to:", platformAdmin);
         } else {
-            console2.log(
-                "Address already has PLATFORM_ADMIN_ROLE:",
-                platformAdmin
-            );
+            console2.log("Address already has PLATFORM_ADMIN_ROLE:", platformAdmin);
         }
 
         // 6. Kết thúc broadcast

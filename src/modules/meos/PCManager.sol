@@ -15,11 +15,7 @@ contract PCManager is BranchContextUpgradeable {
     uint256 public constant PERM_MEOS_PC_MANAGER = 1 << 0;
     uint256 public constant PERM_MEOS_VIP_SETTING = 1 << 1;
 
-    function initialize(
-        uint48 _branchId,
-        uint48 _orgId,
-        address _branchModuleManager
-    ) external initializer {
+    function initialize(uint48 _branchId, uint48 _orgId, address _branchModuleManager) external initializer {
         __BranchContext_init(_branchId, _orgId, _branchModuleManager);
     }
 

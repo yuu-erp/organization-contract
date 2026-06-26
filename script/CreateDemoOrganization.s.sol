@@ -11,27 +11,20 @@ contract CreateDemoOrganization is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        address organizationManagerAddress = vm.envAddress(
-            "ORGANIZATION_MANAGER_PROXY"
-        );
+        address organizationManagerAddress = vm.envAddress("ORGANIZATION_MANAGER_PROXY");
 
         address organizationOwner = vm.envAddress("ORGANIZATION_OWNER");
 
         vm.startBroadcast(deployerPrivateKey);
 
-        OrganizationManager organizationManager = OrganizationManager(
-            organizationManagerAddress
-        );
+        OrganizationManager organizationManager = OrganizationManager(organizationManagerAddress);
 
         // 1. Đăng ký module MEOS và LOYALTY cho Organization
         bytes32[] memory orgModules = new bytes32[](2);
         orgModules[0] = ModuleKeys.MODULE_MEOS;
         orgModules[1] = ModuleKeys.MODULE_LOYALTY;
 
-        uint256 organizationId = organizationManager.createOrganization(
-            organizationOwner,
-            orgModules
-        );
+        uint256 organizationId = organizationManager.createOrganization(organizationOwner, orgModules);
 
         // 2. Tạo Branch 1 bật cả MEOS và LOYALTY
         bytes32[] memory branch1Modules = new bytes32[](2);
@@ -61,11 +54,7 @@ contract CreateDemoOrganization is Script {
         vm.serializeAddress(json, "branch1_MEOS_proxy", branch1MeosProxy);
         vm.serializeAddress(json, "branch1_LOYALTY_proxy", branch1LoyaltyProxy);
         vm.serializeUint(json, "branchId2", branchId2);
-        string memory finalJson = vm.serializeAddress(
-            json,
-            "branch2_LOYALTY_proxy",
-            branch2LoyaltyProxy
-        );
+        string memory finalJson = vm.serializeAddress(json, "branch2_LOYALTY_proxy", branch2LoyaltyProxy);
 
         vm.writeJson(finalJson, "deployments/demo_organization.json");
     }

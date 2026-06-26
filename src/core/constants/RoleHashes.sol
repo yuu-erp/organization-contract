@@ -11,6 +11,5 @@ library RoleHashes {
     // Quyền dành cho Đội ngũ Developer (Nâng cấp module)
     bytes32 public constant OPS_ADMIN_ROLE = keccak256("OPS_ADMIN_ROLE");
     // Quyền dành cho Đội ngũ Vận hành/Sale (Tạo tổ chức, cấp phép module)
-    bytes32 public constant PLATFORM_ADMIN_ROLE =
-        keccak256("PLATFORM_ADMIN_ROLE");
+    bytes32 public constant PLATFORM_ADMIN_ROLE = keccak256("PLATFORM_ADMIN_ROLE");
 }

@@ -26,12 +26,7 @@ import {BranchModuleManagerStorage} from "./storage/BranchModuleManagerStorage.s
  * 2. enableModule(branchId, moduleKey) → gọi factory deploy module bundle
  * 3. disableModule(branchId, moduleKey) → soft disable
  */
-contract BranchModuleManager is
-    Initializable,
-    UUPSUpgradeable,
-    BranchModuleManagerStorage,
-    IBranchModuleManager
-{
+contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleManagerStorage, IBranchModuleManager {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -49,10 +44,8 @@ contract BranchModuleManager is
         address staffManagerBeaconAddress
     ) external initializer {
         if (
-            accessControlAddress == address(0) ||
-            organizationManagerAddress == address(0) ||
-            moduleRegistryAddress == address(0) ||
-            staffManagerBeaconAddress == address(0)
+            accessControlAddress == address(0) || organizationManagerAddress == address(0)
+                || moduleRegistryAddress == address(0) || staffManagerBeaconAddress == address(0)
         ) {
             revert InvalidAddress();
         }
@@ -66,9 +59,7 @@ contract BranchModuleManager is
     // ====== Modifiers ======
 
     modifier onlyPlatformAdmin() {
-        if (
-            !accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)
-        ) {
+        if (!accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)) {
             revert Unauthorized();
         }
         _;
@@ -80,10 +71,7 @@ contract BranchModuleManager is
      * @dev Provision branch: deploy BranchStaffManager (shared service).
      * Phải gọi trước khi enableModule.
      */
-    function provisionBranch(
-        uint48 branchId,
-        uint48 orgId
-    ) external onlyPlatformAdmin {
+    function provisionBranch(uint48 branchId, uint48 orgId) external onlyPlatformAdmin {
         // Validate branch exists
         if (!organizationManager.branchExists(branchId)) {
             revert InvalidInput();
@@ -98,11 +86,7 @@ contract BranchModuleManager is
         address staffManager = address(
             new BeaconProxy(
                 staffManagerBeacon,
-                abi.encodeWithSignature(
-                    "initialize(uint48,address)",
-                    branchId,
-                    address(accessControl)
-                )
+                abi.encodeWithSignature("initialize(uint48,address)", branchId, address(accessControl))
             )
         );
 
@@ -116,10 +100,7 @@ contract BranchModuleManager is
      * @dev Enable module cho branch.
      * Gọi factory tương ứng để deploy toàn bộ module bundle.
      */
-    function enableModule(
-        uint48 branchId,
-        bytes32 moduleKey
-    ) external onlyPlatformAdmin returns (address moduleRoot) {
+    function enableModule(uint48 branchId, bytes32 moduleKey) external onlyPlatformAdmin returns (address moduleRoot) {
         if (!branchProvisioned[branchId]) {
             revert BranchNotProvisioned();
         }
@@ -145,11 +126,7 @@ contract BranchModuleManager is
         address factoryAddress = moduleRegistry.getModuleFactory(moduleKey);
 
         // Gọi factory deploy module bundle
-        moduleRoot = IModuleFactory(factoryAddress).deployModule(
-            branchId,
-            orgId,
-            branchStaffManagers[branchId]
-        );
+        moduleRoot = IModuleFactory(factoryAddress).deployModule(branchId, orgId, branchStaffManagers[branchId]);
 
         // Lưu state
         branchModuleRoots[branchId][moduleKey] = moduleRoot;
@@ -161,10 +138,7 @@ contract BranchModuleManager is
     /**
      * @dev Disable module (soft — giữ data, chỉ remove khỏi enabled set).
      */
-    function disableModule(
-        uint48 branchId,
-        bytes32 moduleKey
-    ) external onlyPlatformAdmin {
+    function disableModule(uint48 branchId, bytes32 moduleKey) external onlyPlatformAdmin {
         if (!branchEnabledModules[branchId].contains(moduleKey)) {
             revert ModuleNotEnabled();
         }
@@ -188,31 +162,22 @@ contract BranchModuleManager is
     /**
      * @dev Lấy StaffManager address.
      */
-    function getBranchStaffManager(
-        uint48 branchId
-    ) external view returns (address) {
+    function getBranchStaffManager(uint48 branchId) external view returns (address) {
         return branchStaffManagers[branchId];
     }
 
     /**
      * @dev Lấy module root address.
      */
-    function getModuleRoot(
-        uint48 branchId,
-        bytes32 moduleKey
-    ) external view returns (address) {
+    function getModuleRoot(uint48 branchId, bytes32 moduleKey) external view returns (address) {
         return branchModuleRoots[branchId][moduleKey];
     }
 
     /**
      * @dev Lấy danh sách module keys + addresses đang enabled của branch.
      */
-    function getBranchModules(
-        uint48 branchId
-    ) external view returns (bytes32[] memory keys, address[] memory roots) {
-        EnumerableSet.Bytes32Set storage modules = branchEnabledModules[
-            branchId
-        ];
+    function getBranchModules(uint48 branchId) external view returns (bytes32[] memory keys, address[] memory roots) {
+        EnumerableSet.Bytes32Set storage modules = branchEnabledModules[branchId];
         uint256 length = modules.length();
 
         keys = new bytes32[](length);
@@ -228,10 +193,7 @@ contract BranchModuleManager is
     /**
      * @dev Kiểm tra module đang enabled cho branch không.
      */
-    function isModuleEnabled(
-        uint48 branchId,
-        bytes32 moduleKey
-    ) external view returns (bool) {
+    function isModuleEnabled(uint48 branchId, bytes32 moduleKey) external view returns (bool) {
         return branchEnabledModules[branchId].contains(moduleKey);
     }
 

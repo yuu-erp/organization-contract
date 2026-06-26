@@ -8,12 +8,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ISystemAccessControl} from "./interfaces/ISystemAccessControl.sol";
 import {RoleHashes} from "./constants/RoleHashes.sol";
 
-contract SystemAccessControl is
-    Initializable,
-    AccessControlUpgradeable,
-    UUPSUpgradeable,
-    ISystemAccessControl
-{
+contract SystemAccessControl is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ISystemAccessControl {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -36,17 +31,12 @@ contract SystemAccessControl is
         // Hierarchy
         _setRoleAdmin(RoleHashes.OPS_ADMIN_ROLE, RoleHashes.DEFAULT_ADMIN_ROLE);
 
-        _setRoleAdmin(
-            RoleHashes.PLATFORM_ADMIN_ROLE,
-            RoleHashes.DEFAULT_ADMIN_ROLE
-        );
+        _setRoleAdmin(RoleHashes.PLATFORM_ADMIN_ROLE, RoleHashes.DEFAULT_ADMIN_ROLE);
     }
 
     function isPlatformAdmin(address account) external view returns (bool) {
         return hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, account);
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyRole(RoleHashes.DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(RoleHashes.DEFAULT_ADMIN_ROLE) {}
 }

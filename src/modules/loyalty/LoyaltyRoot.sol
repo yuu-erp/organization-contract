@@ -30,11 +30,7 @@ contract LoyaltyRoot is Initializable {
 
         pointManager = address(
             new BeaconProxy(
-                _pointManagerBeacon,
-                abi.encodeCall(
-                    PointManager.initialize,
-                    (_branchId, _orgId, _branchModuleManager)
-                )
+                _pointManagerBeacon, abi.encodeCall(PointManager.initialize, (_branchId, _orgId, _branchModuleManager))
             )
         );
     }

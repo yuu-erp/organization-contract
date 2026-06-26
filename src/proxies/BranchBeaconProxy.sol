@@ -17,12 +17,7 @@ contract BranchBeaconProxy is BeaconProxy {
     /**
      * @dev Khởi tạo Proxy, trỏ về ngọn hải đăng và thực thi data khởi tạo của Logic
      */
-    constructor(
-        address beacon,
-        bytes memory data,
-        uint48 _branchId,
-        uint48 _orgId
-    ) BeaconProxy(beacon, data) {
+    constructor(address beacon, bytes memory data, uint48 _branchId, uint48 _orgId) BeaconProxy(beacon, data) {
         BRANCH_ID = _branchId;
         ORG_ID = _orgId;
     }

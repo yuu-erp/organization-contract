@@ -7,10 +7,7 @@ import {console} from "forge-std/console.sol";
 import {OrganizationManager} from "../src/core/OrganizationManager.sol";
 
 interface IOrganizationManagerProxy {
-    function upgradeToAndCall(
-        address newImplementation,
-        bytes calldata data
-    ) external;
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external;
 }
 
 contract UpgradeOrganizationManager is Script {
@@ -23,10 +20,7 @@ contract UpgradeOrganizationManager is Script {
 
         OrganizationManager newImplementation = new OrganizationManager();
 
-        IOrganizationManagerProxy(proxyAddress).upgradeToAndCall(
-            address(newImplementation),
-            ""
-        );
+        IOrganizationManagerProxy(proxyAddress).upgradeToAndCall(address(newImplementation), "");
 
         vm.stopBroadcast();
 

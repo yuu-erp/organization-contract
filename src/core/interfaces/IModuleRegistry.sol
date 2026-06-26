@@ -12,10 +12,7 @@ interface IModuleRegistry {
     event ModuleUpdated(bytes32 indexed key, address newFactory);
     event ModuleStatusChanged(bytes32 indexed key, bool active);
     event OrgModuleSubscribed(uint256 indexed orgId, bytes32 indexed moduleKey);
-    event OrgModuleUnsubscribed(
-        uint256 indexed orgId,
-        bytes32 indexed moduleKey
-    );
+    event OrgModuleUnsubscribed(uint256 indexed orgId, bytes32 indexed moduleKey);
 
     // ====== Errors ======
 
@@ -32,11 +29,7 @@ interface IModuleRegistry {
     /**
      * @dev Đăng ký module mới vào hệ thống.
      */
-    function registerModule(
-        bytes32 key,
-        string calldata name,
-        address factory
-    ) external;
+    function registerModule(bytes32 key, string calldata name, address factory) external;
 
     /**
      * @dev Cập nhật factory address của module.
@@ -65,17 +58,12 @@ interface IModuleRegistry {
     /**
      * @dev Kiểm tra org đã subscribe module chưa.
      */
-    function isOrgSubscribed(
-        uint256 orgId,
-        bytes32 moduleKey
-    ) external view returns (bool);
+    function isOrgSubscribed(uint256 orgId, bytes32 moduleKey) external view returns (bool);
 
     /**
      * @dev Lấy danh sách module keys mà org đã subscribe.
      */
-    function getOrgModules(
-        uint256 orgId
-    ) external view returns (bytes32[] memory);
+    function getOrgModules(uint256 orgId) external view returns (bytes32[] memory);
 
     /**
      * @dev Lấy factory address của module.

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IBranchModuleManager} from "../../core/interfaces/IBranchModuleManager.sol";
+import {IBranchStaffManager} from "../../core/interfaces/IBranchStaffManager.sol";
 
 /**
  * @title BranchContextUpgradeable
@@ -22,6 +23,8 @@ abstract contract BranchContextUpgradeable is Initializable {
 
     error ModuleDisabled();
 
+    error AccessDenied();
+
     modifier onlyIfModuleEnabled(bytes32 moduleKey) {
         if (
             !IBranchModuleManager(branchModuleManager).isModuleEnabled(
@@ -35,10 +38,10 @@ abstract contract BranchContextUpgradeable is Initializable {
     }
 
     modifier requiresGlobalPermission(uint256 permissionBit) {
-        address hr = IBranchModuleManager(branchModuleManager)
+        address staffManager = IBranchModuleManager(branchModuleManager)
             .getBranchStaffManager(branchId);
         if (
-            !IBranchStaffManagerContext(hr).hasGlobalPermission(
+            !IBranchStaffManager(staffManager).hasGlobalPermission(
                 msg.sender,
                 permissionBit
             )
@@ -53,10 +56,10 @@ abstract contract BranchContextUpgradeable is Initializable {
         bytes32 moduleKey,
         uint256 permissionBit
     ) {
-        address hr = IBranchModuleManager(branchModuleManager)
+        address staffManager = IBranchModuleManager(branchModuleManager)
             .getBranchStaffManager(branchId);
         if (
-            !IBranchStaffManagerContext(hr).hasModulePermission(
+            !IBranchStaffManager(staffManager).hasModulePermission(
                 msg.sender,
                 moduleKey,
                 permissionBit

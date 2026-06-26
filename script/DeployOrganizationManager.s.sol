@@ -16,27 +16,18 @@ contract DeployOrganizationManager is Script {
 
         OrganizationManager implementation = new OrganizationManager();
 
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            abi.encodeCall(OrganizationManager.initialize, (accessControl))
-        );
+        ERC1967Proxy proxy =
+            new ERC1967Proxy(address(implementation), abi.encodeCall(OrganizationManager.initialize, (accessControl)));
 
         vm.stopBroadcast();
 
-        console2.log(
-            "OrganizationManager Implementation:",
-            address(implementation)
-        );
+        console2.log("OrganizationManager Implementation:", address(implementation));
 
         console2.log("OrganizationManager Proxy:", address(proxy));
 
         string memory json = "deployments";
         vm.serializeAddress(json, "implementation", address(implementation));
-        string memory finalJson = vm.serializeAddress(
-            json,
-            "proxy",
-            address(proxy)
-        );
+        string memory finalJson = vm.serializeAddress(json, "proxy", address(proxy));
 
         vm.writeJson(finalJson, "deployments/organization_manager.json");
     }

@@ -23,12 +23,7 @@ import {ModuleRegistryStorage} from "./storage/ModuleRegistryStorage.sol";
  * - PLATFORM_ADMIN kích hoạt module cho org (subscribeOrgToModule)
  * - BranchModuleManager query factory address để deploy
  */
-contract ModuleRegistry is
-    Initializable,
-    UUPSUpgradeable,
-    ModuleRegistryStorage,
-    IModuleRegistry
-{
+contract ModuleRegistry is Initializable, UUPSUpgradeable, ModuleRegistryStorage, IModuleRegistry {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -58,9 +53,7 @@ contract ModuleRegistry is
     }
 
     modifier onlyPlatformAdmin() {
-        if (
-            !accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)
-        ) {
+        if (!accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)) {
             revert Unauthorized();
         }
         _;
@@ -72,11 +65,7 @@ contract ModuleRegistry is
      * @dev Đăng ký module mới vào hệ thống.
      * Chỉ OPS_ADMIN mới được gọi.
      */
-    function registerModule(
-        bytes32 key,
-        string calldata name,
-        address factory
-    ) external onlyOpsAdmin {
+    function registerModule(bytes32 key, string calldata name, address factory) external onlyOpsAdmin {
         if (factory == address(0)) {
             revert InvalidAddress();
         }
@@ -85,13 +74,8 @@ contract ModuleRegistry is
             revert ModuleAlreadyRegistered();
         }
 
-        moduleDefinitions[key] = ModuleTypes.ModuleDefinition({
-            key: key,
-            name: name,
-            factory: factory,
-            active: true,
-            exists: true
-        });
+        moduleDefinitions[key] =
+            ModuleTypes.ModuleDefinition({key: key, name: name, factory: factory, active: true, exists: true});
 
         registeredModuleKeys.add(key);
 
@@ -101,10 +85,7 @@ contract ModuleRegistry is
     /**
      * @dev Cập nhật factory address của module.
      */
-    function updateModuleFactory(
-        bytes32 key,
-        address newFactory
-    ) external onlyOpsAdmin {
+    function updateModuleFactory(bytes32 key, address newFactory) external onlyOpsAdmin {
         if (newFactory == address(0)) {
             revert InvalidAddress();
         }
@@ -132,10 +113,7 @@ contract ModuleRegistry is
     /**
      * @dev Kích hoạt module cho Organization.
      */
-    function subscribeOrgToModule(
-        uint48 orgId,
-        bytes32 moduleKey
-    ) external onlyPlatformAdmin {
+    function subscribeOrgToModule(uint48 orgId, bytes32 moduleKey) external onlyPlatformAdmin {
         _requireModuleExists(moduleKey);
 
         if (!moduleDefinitions[moduleKey].active) {
@@ -154,10 +132,7 @@ contract ModuleRegistry is
     /**
      * @dev Huỷ đăng ký module cho Organization.
      */
-    function unsubscribeOrgFromModule(
-        uint48 orgId,
-        bytes32 moduleKey
-    ) external onlyPlatformAdmin {
+    function unsubscribeOrgFromModule(uint48 orgId, bytes32 moduleKey) external onlyPlatformAdmin {
         if (!orgSubscribedModules[orgId].contains(moduleKey)) {
             revert OrgNotSubscribed();
         }
@@ -172,19 +147,14 @@ contract ModuleRegistry is
     /**
      * @dev Kiểm tra org đã subscribe module chưa.
      */
-    function isOrgSubscribed(
-        uint48 orgId,
-        bytes32 moduleKey
-    ) external view returns (bool) {
+    function isOrgSubscribed(uint48 orgId, bytes32 moduleKey) external view returns (bool) {
         return orgSubscribedModules[orgId].contains(moduleKey);
     }
 
     /**
      * @dev Lấy danh sách module keys mà org đã subscribe.
      */
-    function getOrgModules(
-        uint48 orgId
-    ) external view returns (bytes32[] memory keys) {
+    function getOrgModules(uint48 orgId) external view returns (bytes32[] memory keys) {
         EnumerableSet.Bytes32Set storage modules = orgSubscribedModules[orgId];
         uint256 length = modules.length();
 

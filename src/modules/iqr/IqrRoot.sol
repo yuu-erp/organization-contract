@@ -30,11 +30,7 @@ contract IqrRoot is Initializable {
 
         posManager = address(
             new BeaconProxy(
-                _posManagerBeacon,
-                abi.encodeCall(
-                    POSManager.initialize,
-                    (_branchId, _orgId, _branchModuleManager)
-                )
+                _posManagerBeacon, abi.encodeCall(POSManager.initialize, (_branchId, _orgId, _branchModuleManager))
             )
         );
     }

@@ -22,12 +22,7 @@ import {OrganizationManagerStorage} from "./storage/OrganizationManagerStorage.s
  * @title OrganizationManager
  * @dev Quản lý vòng đời Organization và Branch của nền tảng (Đã tối ưu Storage Packing).
  */
-contract OrganizationManager is
-    Initializable,
-    UUPSUpgradeable,
-    OrganizationManagerStorage,
-    IOrganizationManager
-{
+contract OrganizationManager is Initializable, UUPSUpgradeable, OrganizationManagerStorage, IOrganizationManager {
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -51,9 +46,7 @@ contract OrganizationManager is
      * @dev Chỉ Platform Admin mới được phép thực hiện.
      */
     modifier onlyPlatformAdmin() {
-        if (
-            !accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)
-        ) {
+        if (!accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)) {
             revert Unauthorized();
         }
         _;
@@ -62,10 +55,11 @@ contract OrganizationManager is
     /**
      * @dev Tạo mới Organization kèm đăng ký module.
      */
-    function createOrganization(
-        address owner,
-        bytes32[] calldata moduleKeys
-    ) external onlyPlatformAdmin returns (uint48 organizationId) {
+    function createOrganization(address owner, bytes32[] calldata moduleKeys)
+        external
+        onlyPlatformAdmin
+        returns (uint48 organizationId)
+    {
         if (owner == address(0)) {
             revert InvalidAddress();
         }
@@ -76,12 +70,8 @@ contract OrganizationManager is
 
         organizationId = ++organizationCounter;
 
-        organizations[organizationId] = OrganizationTypes.Organization({
-            owner: owner,
-            id: organizationId,
-            active: true,
-            exists: true
-        });
+        organizations[organizationId] =
+            OrganizationTypes.Organization({owner: owner, id: organizationId, active: true, exists: true});
 
         ownerToOrganizationId[owner] = organizationId;
 
@@ -90,10 +80,7 @@ contract OrganizationManager is
         // Tự động subscribe các module
         if (moduleRegistry != address(0)) {
             for (uint256 i = 0; i < moduleKeys.length; i++) {
-                IModuleRegistry(moduleRegistry).subscribeOrgToModule(
-                    organizationId,
-                    moduleKeys[i]
-                );
+                IModuleRegistry(moduleRegistry).subscribeOrgToModule(organizationId, moduleKeys[i]);
             }
         }
     }
@@ -101,20 +88,17 @@ contract OrganizationManager is
     /**
      * @dev Tạo mới Branch cho Organization kèm kích hoạt module.
      */
-    function createBranch(
-        uint48 organizationId,
-        bytes32[] calldata moduleKeysToEnable
-    ) external onlyPlatformAdmin returns (uint48 branchId) {
+    function createBranch(uint48 organizationId, bytes32[] calldata moduleKeysToEnable)
+        external
+        onlyPlatformAdmin
+        returns (uint48 branchId)
+    {
         _requireOrganizationExists(organizationId);
 
         branchId = ++branchCounter;
 
-        branches[branchId] = BranchTypes.Branch({
-            owner: address(0),
-            organizationId: organizationId,
-            active: true,
-            exists: true
-        });
+        branches[branchId] =
+            BranchTypes.Branch({owner: address(0), organizationId: organizationId, active: true, exists: true});
 
         organizationBranches[organizationId].add(branchId);
 
@@ -122,16 +106,10 @@ contract OrganizationManager is
 
         // Tự động provision và kích hoạt các module
         if (branchModuleManager != address(0)) {
-            IBranchModuleManager(branchModuleManager).provisionBranch(
-                branchId,
-                organizationId
-            );
+            IBranchModuleManager(branchModuleManager).provisionBranch(branchId, organizationId);
 
             for (uint256 i = 0; i < moduleKeysToEnable.length; i++) {
-                IBranchModuleManager(branchModuleManager).enableModule(
-                    branchId,
-                    moduleKeysToEnable[i]
-                );
+                IBranchModuleManager(branchModuleManager).enableModule(branchId, moduleKeysToEnable[i]);
             }
         }
     }
@@ -139,13 +117,8 @@ contract OrganizationManager is
     /**
      * @dev Cập nhật địa chỉ ModuleRegistry và BranchModuleManager.
      */
-    function setRegistryAndManager(
-        address _moduleRegistry,
-        address _branchModuleManager
-    ) external onlyPlatformAdmin {
-        if (
-            _moduleRegistry == address(0) || _branchModuleManager == address(0)
-        ) {
+    function setRegistryAndManager(address _moduleRegistry, address _branchModuleManager) external onlyPlatformAdmin {
+        if (_moduleRegistry == address(0) || _branchModuleManager == address(0)) {
             revert InvalidAddress();
         }
         moduleRegistry = _moduleRegistry;
@@ -155,23 +128,17 @@ contract OrganizationManager is
     /**
      * @dev Trả về organizationId của owner.
      */
-    function getOrganizationIdByOwner(
-        address owner
-    ) external view returns (uint48) {
+    function getOrganizationIdByOwner(address owner) external view returns (uint48) {
         return ownerToOrganizationId[owner];
     }
 
     /**
      * @dev Trả về danh sách Branch thuộc Organization.
      */
-    function getOrganizationBranches(
-        uint48 organizationId
-    ) external view returns (uint48[] memory branchIds) {
+    function getOrganizationBranches(uint48 organizationId) external view returns (uint48[] memory branchIds) {
         _requireOrganizationExists(organizationId);
 
-        EnumerableSet.UintSet storage branchesSet = organizationBranches[
-            organizationId
-        ];
+        EnumerableSet.UintSet storage branchesSet = organizationBranches[organizationId];
 
         uint256 length = branchesSet.length();
         branchIds = new uint48[](length);
@@ -185,9 +152,7 @@ contract OrganizationManager is
     /**
      * @dev Kiểm tra Organization tồn tại.
      */
-    function organizationExists(
-        uint48 organizationId
-    ) external view returns (bool) {
+    function organizationExists(uint48 organizationId) external view returns (bool) {
         return organizations[organizationId].exists;
     }
 

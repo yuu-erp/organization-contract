@@ -8,17 +8,9 @@ pragma solidity ^0.8.20;
 interface IBranchModuleManager {
     // ====== Events ======
 
-    event BranchProvisioned(
-        uint256 indexed branchId,
-        uint256 indexed orgId,
-        address staffManager
-    );
+    event BranchProvisioned(uint256 indexed branchId, uint256 indexed orgId, address staffManager);
 
-    event ModuleEnabled(
-        uint256 indexed branchId,
-        bytes32 indexed moduleKey,
-        address moduleRoot
-    );
+    event ModuleEnabled(uint256 indexed branchId, bytes32 indexed moduleKey, address moduleRoot);
 
     event ModuleDisabled(uint256 indexed branchId, bytes32 indexed moduleKey);
 
@@ -45,10 +37,7 @@ interface IBranchModuleManager {
      * @dev Enable module cho branch đã provision.
      *      Gọi factory deploy module bundle.
      */
-    function enableModule(
-        uint256 branchId,
-        bytes32 moduleKey
-    ) external returns (address moduleRoot);
+    function enableModule(uint256 branchId, bytes32 moduleKey) external returns (address moduleRoot);
 
     /**
      * @dev Disable module (soft — giữ data, chỉ disable).
@@ -60,37 +49,25 @@ interface IBranchModuleManager {
     /**
      * @dev Kiểm tra branch đã được provision chưa.
      */
-    function isBranchProvisioned(
-        uint256 branchId
-    ) external view returns (bool);
+    function isBranchProvisioned(uint256 branchId) external view returns (bool);
 
     /**
      * @dev Lấy StaffManager address của branch.
      */
-    function getBranchStaffManager(
-        uint256 branchId
-    ) external view returns (address);
+    function getBranchStaffManager(uint256 branchId) external view returns (address);
 
     /**
      * @dev Lấy module root address.
      */
-    function getModuleRoot(
-        uint256 branchId,
-        bytes32 moduleKey
-    ) external view returns (address);
+    function getModuleRoot(uint256 branchId, bytes32 moduleKey) external view returns (address);
 
     /**
      * @dev Lấy danh sách module keys + addresses của branch.
      */
-    function getBranchModules(
-        uint256 branchId
-    ) external view returns (bytes32[] memory keys, address[] memory roots);
+    function getBranchModules(uint256 branchId) external view returns (bytes32[] memory keys, address[] memory roots);
 
     /**
      * @dev Kiểm tra module có đang enabled cho branch không.
      */
-    function isModuleEnabled(
-        uint256 branchId,
-        bytes32 moduleKey
-    ) external view returns (bool);
+    function isModuleEnabled(uint256 branchId, bytes32 moduleKey) external view returns (bool);
 }

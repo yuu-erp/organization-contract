@@ -11,11 +11,7 @@ import {ModuleKeys} from "../../core/constants/ModuleKeys.sol";
 contract POSManager is BranchContextUpgradeable {
     uint256 public totalOrders;
 
-    function initialize(
-        uint48 _branchId,
-        uint48 _orgId,
-        address _branchModuleManager
-    ) external initializer {
+    function initialize(uint48 _branchId, uint48 _orgId, address _branchModuleManager) external initializer {
         __BranchContext_init(_branchId, _orgId, _branchModuleManager);
     }
 

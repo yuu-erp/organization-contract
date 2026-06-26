@@ -17,10 +17,7 @@ contract DeploySystemAccessControl is Script {
         console2.log("SystemAccessControl Implementation deployed at:", address(implementation));
 
         // 2. Encode Initialization Data
-        bytes memory initData = abi.encodeCall(
-            SystemAccessControl.initialize,
-            (defaultAdmin)
-        );
+        bytes memory initData = abi.encodeCall(SystemAccessControl.initialize, (defaultAdmin));
 
         // 3. Deploy Proxy and Initialize
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
@@ -32,7 +29,7 @@ contract DeploySystemAccessControl is Script {
         string memory obj = "deployData";
         vm.serializeAddress(obj, "implementation", address(implementation));
         string memory finalJson = vm.serializeAddress(obj, "proxy", address(proxy));
-        
+
         // Tạo thư mục nếu chưa có bằng cách ghi thẳng vào file (Foundry tự tạo file nếu thiếu)
         vm.writeJson(finalJson, "deployments/SystemAccessControl.json");
     }

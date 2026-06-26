@@ -14,34 +14,17 @@ contract LoyaltyFactory is IModuleFactory {
     address public pointManagerBeacon;
     address public branchModuleManager;
 
-    constructor(
-        address _beacon,
-        address _pointManagerBeacon,
-        address _branchModuleManager
-    ) {
+    constructor(address _beacon, address _pointManagerBeacon, address _branchModuleManager) {
         beacon = _beacon;
         pointManagerBeacon = _pointManagerBeacon;
         branchModuleManager = _branchModuleManager;
     }
 
-    function deployModule(
-        uint48 branchId,
-        uint48 orgId,
-        address staffManager
-    ) external returns (address moduleRoot) {
+    function deployModule(uint48 branchId, uint48 orgId, address staffManager) external returns (address moduleRoot) {
         require(msg.sender == branchModuleManager, "Only BranchModuleManager");
         bytes memory initData = abi.encodeCall(
-            LoyaltyRoot.initialize,
-            (
-                branchId,
-                orgId,
-                staffManager,
-                pointManagerBeacon,
-                branchModuleManager
-            )
+            LoyaltyRoot.initialize, (branchId, orgId, staffManager, pointManagerBeacon, branchModuleManager)
         );
-        moduleRoot = address(
-            new BranchBeaconProxy(beacon, initData, branchId, orgId)
-        );
+        moduleRoot = address(new BranchBeaconProxy(beacon, initData, branchId, orgId));
     }
 }

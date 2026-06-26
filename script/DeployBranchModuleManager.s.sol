@@ -11,9 +11,7 @@ contract DeployBranchModuleManager is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         address accessControl = vm.envAddress("PROXY_ADDRESS");
-        address organizationManager = vm.envAddress(
-            "ORGANIZATION_MANAGER_PROXY"
-        );
+        address organizationManager = vm.envAddress("ORGANIZATION_MANAGER_PROXY");
         address moduleRegistry = vm.envAddress("MODULE_REGISTRY_PROXY");
         address staffManagerBeacon = vm.envAddress("STAFF_MANAGER_BEACON");
 
@@ -24,31 +22,18 @@ contract DeployBranchModuleManager is Script {
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(implementation),
             abi.encodeCall(
-                BranchModuleManager.initialize,
-                (
-                    accessControl,
-                    organizationManager,
-                    moduleRegistry,
-                    staffManagerBeacon
-                )
+                BranchModuleManager.initialize, (accessControl, organizationManager, moduleRegistry, staffManagerBeacon)
             )
         );
 
         vm.stopBroadcast();
 
-        console2.log(
-            "BranchModuleManager Implementation:",
-            address(implementation)
-        );
+        console2.log("BranchModuleManager Implementation:", address(implementation));
         console2.log("BranchModuleManager Proxy:", address(proxy));
 
         string memory json = "deployments";
         vm.serializeAddress(json, "implementation", address(implementation));
-        string memory finalJson = vm.serializeAddress(
-            json,
-            "proxy",
-            address(proxy)
-        );
+        string memory finalJson = vm.serializeAddress(json, "proxy", address(proxy));
 
         vm.writeJson(finalJson, "deployments/branch_module_manager.json");
     }

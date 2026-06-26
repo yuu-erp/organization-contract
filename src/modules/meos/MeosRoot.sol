@@ -37,20 +37,13 @@ contract MeosRoot is Initializable {
         // Deploy các contract con dưới dạng Beacon Proxy
         pcManager = address(
             new BeaconProxy(
-                _pcManagerBeacon,
-                abi.encodeCall(
-                    PCManager.initialize,
-                    (_branchId, _orgId, _branchModuleManager)
-                )
+                _pcManagerBeacon, abi.encodeCall(PCManager.initialize, (_branchId, _orgId, _branchModuleManager))
             )
         );
         accountManager = address(
             new BeaconProxy(
                 _accountManagerBeacon,
-                abi.encodeCall(
-                    AccountManager.initialize,
-                    (_branchId, _orgId, _branchModuleManager)
-                )
+                abi.encodeCall(AccountManager.initialize, (_branchId, _orgId, _branchModuleManager))
             )
         );
     }
@@ -58,11 +51,7 @@ contract MeosRoot is Initializable {
     /**
      * @dev Trả về danh sách các contract con thuộc module MEOS.
      */
-    function getSubContracts()
-        external
-        view
-        returns (address _pcManager, address _accountManager)
-    {
+    function getSubContracts() external view returns (address _pcManager, address _accountManager) {
         return (pcManager, accountManager);
     }
 }

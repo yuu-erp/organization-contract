@@ -33,27 +33,17 @@ contract MeosFactory is IModuleFactory {
         _;
     }
 
-    function deployModule(
-        uint48 branchId,
-        uint48 orgId,
-        address staffManager
-    ) external onlyBranchModuleManager returns (address moduleRoot) {
+    function deployModule(uint48 branchId, uint48 orgId, address staffManager)
+        external
+        onlyBranchModuleManager
+        returns (address moduleRoot)
+    {
         // LƯU Ý: Để hàm abi.encodeCall này không báo lỗi,
         // hàm initialize trong contract MeosRoot.sol cũng BẮT BUỘC phải đổi sang uint48.
         bytes memory initData = abi.encodeCall(
-            MeosRoot.initialize,
-            (
-                branchId,
-                orgId,
-                staffManager,
-                pcManagerBeacon,
-                accountManagerBeacon,
-                msg.sender
-            )
+            MeosRoot.initialize, (branchId, orgId, staffManager, pcManagerBeacon, accountManagerBeacon, msg.sender)
         );
 
-        moduleRoot = address(
-            new BranchBeaconProxy(beacon, initData, branchId, orgId)
-        );
+        moduleRoot = address(new BranchBeaconProxy(beacon, initData, branchId, orgId));
     }
 }
