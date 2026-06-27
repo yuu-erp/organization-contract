@@ -24,18 +24,18 @@ contract CreateDemoOrganization is Script {
         orgModules[0] = ModuleKeys.MODULE_MEOS;
         orgModules[1] = ModuleKeys.MODULE_LOYALTY;
 
-        uint256 organizationId = organizationManager.createOrganization(organizationOwner, orgModules);
+        uint48 organizationId = organizationManager.createOrganization(organizationOwner, orgModules);
 
         // 2. Tạo Branch 1 bật cả MEOS và LOYALTY
         bytes32[] memory branch1Modules = new bytes32[](2);
         branch1Modules[0] = ModuleKeys.MODULE_MEOS;
         branch1Modules[1] = ModuleKeys.MODULE_LOYALTY;
-        uint256 branchId1 = organizationManager.createBranch(organizationId, branch1Modules);
+        uint48 branchId1 = organizationManager.createBranch(organizationId, branch1Modules);
 
         // 3. Tạo Branch 2 chỉ bật LOYALTY
         bytes32[] memory branch2Modules = new bytes32[](1);
         branch2Modules[0] = ModuleKeys.MODULE_LOYALTY;
-        uint256 branchId2 = organizationManager.createBranch(organizationId, branch2Modules);
+        uint48 branchId2 = organizationManager.createBranch(organizationId, branch2Modules);
 
         vm.stopBroadcast();
 

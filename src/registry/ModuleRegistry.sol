@@ -6,9 +6,9 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import {RoleHashes} from "./constants/RoleHashes.sol";
+import {RoleHashes} from "../core/constants/RoleHashes.sol";
 
-import {ISystemAccessControl} from "./interfaces/ISystemAccessControl.sol";
+import {ISystemAccessControl} from "../core/interfaces/ISystemAccessControl.sol";
 import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
 
 import {ModuleTypes} from "../types/ModuleTypes.sol";

@@ -16,4 +16,10 @@ library OrganizationTypes {
         bool exists; // 8 bits
         // Total: 224 bits
     }
+
+    struct OrganizationMetadata {
+        string name;
+        string organizationAddress;
+        string phoneNumber;
+    }
 }

@@ -7,7 +7,7 @@ import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/Upgradeabl
 
 import {SystemAccessControl} from "../src/core/SystemAccessControl.sol";
 import {OrganizationManager} from "../src/core/OrganizationManager.sol";
-import {ModuleRegistry} from "../src/core/ModuleRegistry.sol";
+import {ModuleRegistry} from "../src/registry/ModuleRegistry.sol";
 import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
 
@@ -154,7 +154,7 @@ contract DeployAndTestAllTest is Test {
         orgModules[1] = ModuleKeys.MODULE_IQR;
         orgModules[2] = ModuleKeys.MODULE_LOYALTY;
 
-        uint256 orgId = omProxy.createOrganization(orgOwner, orgModules);
+        uint48 orgId = uint48(omProxy.createOrganization(orgOwner, orgModules));
         assertEq(orgId, 1);
 
         // 2. Tạo Branch 1: Bật FULL 3 modules (MEOS, IQR, LOYALTY)
@@ -162,14 +162,14 @@ contract DeployAndTestAllTest is Test {
         branch1Modules[0] = ModuleKeys.MODULE_MEOS;
         branch1Modules[1] = ModuleKeys.MODULE_IQR;
         branch1Modules[2] = ModuleKeys.MODULE_LOYALTY;
-        uint256 branchId1 = omProxy.createBranch(orgId, branch1Modules);
+        uint48 branchId1 = omProxy.createBranch(orgId, branch1Modules);
         assertEq(branchId1, 1);
 
         // 3. Tạo Branch 2: Bật MEOS và LOYALTY (Không bật IQR)
         bytes32[] memory branch2Modules = new bytes32[](2);
         branch2Modules[0] = ModuleKeys.MODULE_MEOS;
         branch2Modules[1] = ModuleKeys.MODULE_LOYALTY;
-        uint256 branchId2 = omProxy.createBranch(orgId, branch2Modules);
+        uint48 branchId2 = omProxy.createBranch(orgId, branch2Modules);
         assertEq(branchId2, 2);
 
         vm.stopPrank();
@@ -214,19 +214,28 @@ contract DeployAndTestAllTest is Test {
         // 1. Tạo 1 Organization và Branch bật module MEOS
         bytes32[] memory orgModules = new bytes32[](1);
         orgModules[0] = ModuleKeys.MODULE_MEOS;
-        uint256 orgId = omProxy.createOrganization(orgOwner, orgModules);
-        uint256 branchId = omProxy.createBranch(orgId, orgModules);
+        uint48 orgId = uint48(omProxy.createOrganization(orgOwner, orgModules));
+        uint48 branchId = omProxy.createBranch(orgId, orgModules);
 
         address meosRoot = bmmProxy.getModuleRoot(branchId, ModuleKeys.MODULE_MEOS);
         address pcManagerProxy = MeosRoot(meosRoot).pcManager();
+
+        vm.stopPrank();
+        vm.startPrank(orgOwner);
 
         // 2. Gọi addPC() trên proxy bản cũ
         PCManager(pcManagerProxy).addPC();
         assertEq(PCManager(pcManagerProxy).activePCs(), 1);
 
         // 3. Thực hiện nâng cấp Beacon của PCManager lên logic V2 (thêm doublePCs)
+        vm.stopPrank();
+        vm.startPrank(deployer);
+
         PCManagerV2 pcManagerV2Impl = new PCManagerV2();
         pcManagerBeacon.upgradeTo(address(pcManagerV2Impl));
+
+        vm.stopPrank();
+        vm.startPrank(orgOwner);
 
         // 4. Kiểm tra trạng thái cũ (activePCs) vẫn giữ nguyên là 1
         assertEq(PCManagerV2(pcManagerProxy).activePCs(), 1);
@@ -247,8 +256,8 @@ contract DeployAndTestAllTest is Test {
         bytes32[] memory orgModules = new bytes32[](2);
         orgModules[0] = ModuleKeys.MODULE_IQR;
         orgModules[1] = ModuleKeys.MODULE_LOYALTY;
-        uint256 orgId = omProxy.createOrganization(orgOwner, orgModules);
-        uint256 branchId = omProxy.createBranch(orgId, orgModules);
+        uint48 orgId = uint48(omProxy.createOrganization(orgOwner, orgModules));
+        uint48 branchId = omProxy.createBranch(orgId, orgModules);
 
         address iqrRoot = bmmProxy.getModuleRoot(branchId, ModuleKeys.MODULE_IQR);
         address loyaltyRoot = bmmProxy.getModuleRoot(branchId, ModuleKeys.MODULE_LOYALTY);
@@ -283,12 +292,15 @@ contract DeployAndTestAllTest is Test {
         // 1. Tạo 1 Organization và Branch bật module MEOS
         bytes32[] memory orgModules = new bytes32[](1);
         orgModules[0] = ModuleKeys.MODULE_MEOS;
-        uint256 orgId = omProxy.createOrganization(orgOwner, orgModules);
-        uint256 branchId = omProxy.createBranch(orgId, orgModules);
+        uint48 orgId = uint48(omProxy.createOrganization(orgOwner, orgModules));
+        uint48 branchId = omProxy.createBranch(orgId, orgModules);
 
         address meosRoot = bmmProxy.getModuleRoot(branchId, ModuleKeys.MODULE_MEOS);
         address pcManagerProxy = MeosRoot(meosRoot).pcManager();
         address accountManagerProxy = MeosRoot(meosRoot).accountManager();
+
+        vm.stopPrank();
+        vm.startPrank(orgOwner);
 
         // Check adding PC works when enabled
         PCManager(pcManagerProxy).addPC();
@@ -298,8 +310,14 @@ contract DeployAndTestAllTest is Test {
         AccountManager(accountManagerProxy).registerUser("user1", address(0x123));
         assertEq(AccountManager(accountManagerProxy).usernameToWallet("user1"), address(0x123));
 
+        vm.stopPrank();
+        vm.startPrank(deployer);
+
         // 2. Disable module MEOS
         bmmProxy.disableModule(branchId, ModuleKeys.MODULE_MEOS);
+
+        vm.stopPrank();
+        vm.startPrank(orgOwner);
 
         // 3. PCManager.addPC should revert now
         vm.expectRevert(BranchContextUpgradeable.ModuleDisabled.selector);
@@ -309,8 +327,14 @@ contract DeployAndTestAllTest is Test {
         vm.expectRevert(BranchContextUpgradeable.ModuleDisabled.selector);
         AccountManager(accountManagerProxy).registerUser("user2", address(0x456));
 
+        vm.stopPrank();
+        vm.startPrank(deployer);
+
         // 5. Re-enable module MEOS
         bmmProxy.enableModule(branchId, ModuleKeys.MODULE_MEOS);
+
+        vm.stopPrank();
+        vm.startPrank(orgOwner);
 
         // Should work again
         PCManager(pcManagerProxy).addPC();

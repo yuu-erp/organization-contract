@@ -16,4 +16,11 @@ library BranchTypes {
         bool exists; // 8 bits
         // Total: 224 bits
     }
+
+    struct BranchMetadata {
+        string name;
+        string organizationAddress;
+        string phoneNumber;
+        string code;
+    }
 }

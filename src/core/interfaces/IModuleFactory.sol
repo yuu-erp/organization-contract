@@ -15,5 +15,5 @@ interface IModuleFactory {
      * @param staffManager Địa chỉ BranchStaffManager (shared) — có thể = address(0) nếu chưa deploy
      * @return moduleRoot Địa chỉ root contract của module bundle
      */
-    function deployModule(uint256 branchId, uint256 orgId, address staffManager) external returns (address moduleRoot);
+    function deployModule(uint48 branchId, uint48 orgId, address staffManager) external returns (address moduleRoot);
 }

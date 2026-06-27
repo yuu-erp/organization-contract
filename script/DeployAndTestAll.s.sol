@@ -7,7 +7,7 @@ import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/Upgradeabl
 
 import {SystemAccessControl} from "../src/core/SystemAccessControl.sol";
 import {OrganizationManager} from "../src/core/OrganizationManager.sol";
-import {ModuleRegistry} from "../src/core/ModuleRegistry.sol";
+import {ModuleRegistry} from "../src/registry/ModuleRegistry.sol";
 import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
 
@@ -19,6 +19,8 @@ import {IqrRoot} from "../src/modules/iqr/IqrRoot.sol";
 import {IqrFactory} from "../src/modules/iqr/IqrFactory.sol";
 import {LoyaltyRoot} from "../src/modules/loyalty/LoyaltyRoot.sol";
 import {LoyaltyFactory} from "../src/modules/loyalty/LoyaltyFactory.sol";
+import {POSManager} from "../src/modules/iqr/POSManager.sol";
+import {PointManager} from "../src/modules/loyalty/PointManager.sol";
 
 import {ModuleKeys} from "../src/core/constants/ModuleKeys.sol";
 import {RoleHashes} from "../src/core/constants/RoleHashes.sol";
@@ -32,14 +34,14 @@ contract DeployAndTestAll is Script {
     }
 
     struct TestResults {
-        uint256 orgId;
-        uint256 branchId1;
+        uint48 orgId;
+        uint48 branchId1;
         address branch1Meos;
         address branch1Iqr;
         address branch1Loyalty;
         address branch1MeosPCManager;
         address branch1MeosAccountManager;
-        uint256 branchId2;
+        uint48 branchId2;
         address branch2Meos;
         address branch2Iqr;
         address branch2Loyalty;
@@ -118,19 +120,32 @@ contract DeployAndTestAll is Script {
         {
             address pcBeacon = address(new UpgradeableBeacon(address(new PCManager()), deployer));
             address accBeacon = address(new UpgradeableBeacon(address(new AccountManager()), deployer));
-            MeosFactory meosFactory =
-                new MeosFactory(address(new UpgradeableBeacon(address(new MeosRoot()), deployer)), pcBeacon, accBeacon);
+            MeosFactory meosFactory = new MeosFactory(
+                address(new UpgradeableBeacon(address(new MeosRoot()), deployer)),
+                pcBeacon,
+                accBeacon,
+                address(bmmProxy)
+            );
             mrProxy.registerModule(ModuleKeys.MODULE_MEOS, "MEOS", address(meosFactory));
         }
 
         {
-            IqrFactory iqrFactory = new IqrFactory(address(new UpgradeableBeacon(address(new IqrRoot()), deployer)));
+            address posBeacon = address(new UpgradeableBeacon(address(new POSManager()), deployer));
+            IqrFactory iqrFactory = new IqrFactory(
+                address(new UpgradeableBeacon(address(new IqrRoot()), deployer)),
+                posBeacon,
+                address(bmmProxy)
+            );
             mrProxy.registerModule(ModuleKeys.MODULE_IQR, "IQR", address(iqrFactory));
         }
 
         {
-            LoyaltyFactory loyaltyFactory =
-                new LoyaltyFactory(address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer)));
+            address pointBeacon = address(new UpgradeableBeacon(address(new PointManager()), deployer));
+            LoyaltyFactory loyaltyFactory = new LoyaltyFactory(
+                address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer)),
+                pointBeacon,
+                address(bmmProxy)
+            );
             mrProxy.registerModule(ModuleKeys.MODULE_LOYALTY, "LOYALTY", address(loyaltyFactory));
         }
 
