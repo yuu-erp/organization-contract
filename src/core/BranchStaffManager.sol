@@ -46,11 +46,7 @@ contract BranchStaffManager is Initializable, IBranchStaffManager {
     /**
      * @dev Khởi tạo contract.
      */
-    function initialize(
-        uint48 _branchId,
-        uint48 _orgId,
-        address _organizationManager
-    ) external initializer {
+    function initialize(uint48 _branchId, uint48 _orgId, address _organizationManager) external initializer {
         branchId = _branchId;
         orgId = _orgId;
         organizationManager = _organizationManager;
@@ -84,10 +80,7 @@ contract BranchStaffManager is Initializable, IBranchStaffManager {
         }
 
         // 1. Cấp Role Staff và Global Perms
-        staffProfiles[staff] = StaffProfile({
-            role: ROLE_STAFF,
-            globalPerms: globalPerms
-        });
+        staffProfiles[staff] = StaffProfile({role: ROLE_STAFF, globalPerms: globalPerms});
 
         // 2. Lặp qua mảng để cấp quyền cho từng module (MEOS, IQR...)
         for (uint256 i = 0; i < moduleKeys.length; i++) {
@@ -99,31 +92,23 @@ contract BranchStaffManager is Initializable, IBranchStaffManager {
      * @dev Gán quyền Role và Global Permissions cho nhân sự.
      * Yêu cầu người gọi từ CO_OWNER trở lên.
      */
-    function setGlobalProfile(
-        address staff,
-        uint8 role,
-        uint248 globalPerms
-    ) external requiresRole(ROLE_CO_OWNER) {
+    function setGlobalProfile(address staff, uint8 role, uint248 globalPerms) external requiresRole(ROLE_CO_OWNER) {
         if (role == 0 || role > ROLE_STAFF) revert InvalidRole();
 
         // Chỉ STAFF mới cần bitmask, các cấp quản lý bypass hết nên không cần gán bit
         uint248 assignedPerms = (role == ROLE_STAFF) ? globalPerms : 0;
 
-        staffProfiles[staff] = StaffProfile({
-            role: role,
-            globalPerms: assignedPerms
-        });
+        staffProfiles[staff] = StaffProfile({role: role, globalPerms: assignedPerms});
     }
 
     /**
      * @dev Gán quyền riêng biệt cho một Module cụ thể (vd: MEOS).
      * Yêu cầu người gọi từ MANAGER trở lên.
      */
-    function setModulePermissions(
-        address staff,
-        bytes32 moduleKey,
-        uint256 permissions
-    ) external requiresRole(ROLE_MANAGER) {
+    function setModulePermissions(address staff, bytes32 moduleKey, uint256 permissions)
+        external
+        requiresRole(ROLE_MANAGER)
+    {
         // Phải có hồ sơ (role != 0) thì mới được cấp quyền cấp module
         if (staffProfiles[staff].role == 0) revert Unauthorized();
 
@@ -144,31 +129,25 @@ contract BranchStaffManager is Initializable, IBranchStaffManager {
     /**
      * @dev Check quyền DÙNG CHUNG (Thu ngân, Báo cáo).
      */
-    function hasGlobalPermission(
-        address account,
-        uint256 permissionBit
-    ) external view override returns (bool) {
+    function hasGlobalPermission(address account, uint256 permissionBit) external view override returns (bool) {
         if (_isOwnerOrManager(account)) return true;
 
         StaffProfile memory profile = staffProfiles[account];
-        return
-            (profile.role == ROLE_STAFF) &&
-            ((profile.globalPerms & permissionBit) != 0);
+        return (profile.role == ROLE_STAFF) && ((profile.globalPerms & permissionBit) != 0);
     }
 
     /**
      * @dev Check quyền RIÊNG CỦA MODULE (Ví dụ: Quyền quản lý PC của MEOS).
      */
-    function hasModulePermission(
-        address account,
-        bytes32 moduleKey,
-        uint256 permissionBit
-    ) external view override returns (bool) {
+    function hasModulePermission(address account, bytes32 moduleKey, uint256 permissionBit)
+        external
+        view
+        override
+        returns (bool)
+    {
         if (_isOwnerOrManager(account)) return true;
 
-        return
-            (staffProfiles[account].role == ROLE_STAFF) &&
-            ((modulePerms[account][moduleKey] & permissionBit) != 0);
+        return (staffProfiles[account].role == ROLE_STAFF) && ((modulePerms[account][moduleKey] & permissionBit) != 0);
     }
 
     // ====== INTERNAL LOGIC ======
@@ -183,13 +162,9 @@ contract BranchStaffManager is Initializable, IBranchStaffManager {
     /**
      * @dev Logic cốt lõi để check Role phân cấp.
      */
-    function _hasRoleOrHigher(
-        address account,
-        uint8 minimumRole
-    ) internal view returns (bool) {
+    function _hasRoleOrHigher(address account, uint8 minimumRole) internal view returns (bool) {
         // 1. Owner của Tổ chức (Bypass tuyệt đối mọi quyền)
-        uint48 senderOrg = IOrganizationManager(organizationManager)
-            .getOrganizationIdByOwner(account);
+        uint48 senderOrg = IOrganizationManager(organizationManager).getOrganizationIdByOwner(account);
         if (senderOrg == orgId) return true;
 
         // 2. Quyền phân cấp tại nhánh

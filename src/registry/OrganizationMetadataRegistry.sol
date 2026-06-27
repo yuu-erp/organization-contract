@@ -51,8 +51,8 @@ contract OrganizationMetadataRegistry is
         }
 
         bool isOwner = organizationManager.getOrganizationIdByOwner(msg.sender) == organizationId;
-        bool isAdmin = accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender) ||
-            accessControl.hasRole(RoleHashes.DEFAULT_ADMIN_ROLE, msg.sender);
+        bool isAdmin = accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)
+            || accessControl.hasRole(RoleHashes.DEFAULT_ADMIN_ROLE, msg.sender);
 
         if (!isOwner && !isAdmin) {
             revert Unauthorized();
@@ -70,8 +70,8 @@ contract OrganizationMetadataRegistry is
 
         uint48 organizationId = organizationManager.getBranchOrgId(branchId);
         bool isOwner = organizationManager.getOrganizationIdByOwner(msg.sender) == organizationId;
-        bool isAdmin = accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender) ||
-            accessControl.hasRole(RoleHashes.DEFAULT_ADMIN_ROLE, msg.sender);
+        bool isAdmin = accessControl.hasRole(RoleHashes.PLATFORM_ADMIN_ROLE, msg.sender)
+            || accessControl.hasRole(RoleHashes.DEFAULT_ADMIN_ROLE, msg.sender);
 
         if (!isOwner && !isAdmin) {
             revert Unauthorized();
@@ -89,9 +89,7 @@ contract OrganizationMetadataRegistry is
         string calldata phoneNumber
     ) external override onlyOrganizationOwnerOrAdmin(organizationId) {
         _orgMetadata[organizationId] = OrganizationTypes.OrganizationMetadata({
-            name: name,
-            organizationAddress: organizationAddress,
-            phoneNumber: phoneNumber
+            name: name, organizationAddress: organizationAddress, phoneNumber: phoneNumber
         });
 
         emit OrganizationMetadataUpdated(organizationId, name, organizationAddress, phoneNumber);
@@ -108,10 +106,7 @@ contract OrganizationMetadataRegistry is
         string calldata code
     ) external override onlyBranchOwnerOrAdmin(branchId) {
         _branchMetadata[branchId] = BranchTypes.BranchMetadata({
-            name: name,
-            organizationAddress: organizationAddress,
-            phoneNumber: phoneNumber,
-            code: code
+            name: name, organizationAddress: organizationAddress, phoneNumber: phoneNumber, code: code
         });
 
         emit BranchMetadataUpdated(branchId, name, organizationAddress, phoneNumber, code);
@@ -135,12 +130,7 @@ contract OrganizationMetadataRegistry is
     /**
      * @dev Trả về metadata của Branch.
      */
-    function getBranchMetadata(uint48 branchId)
-        external
-        view
-        override
-        returns (BranchTypes.BranchMetadata memory)
-    {
+    function getBranchMetadata(uint48 branchId) external view override returns (BranchTypes.BranchMetadata memory) {
         if (!organizationManager.branchExists(branchId)) {
             revert BranchNotFound();
         }

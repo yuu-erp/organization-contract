@@ -26,55 +26,33 @@ abstract contract BranchContextUpgradeable is Initializable {
     error AccessDenied();
 
     modifier onlyIfModuleEnabled(bytes32 moduleKey) {
-        if (
-            !IBranchModuleManager(branchModuleManager).isModuleEnabled(
-                branchId,
-                moduleKey
-            )
-        ) {
+        if (!IBranchModuleManager(branchModuleManager).isModuleEnabled(branchId, moduleKey)) {
             revert ModuleDisabled();
         }
         _;
     }
 
     modifier requiresGlobalPermission(uint256 permissionBit) {
-        address staffManager = IBranchModuleManager(branchModuleManager)
-            .getBranchStaffManager(branchId);
-        if (
-            !IBranchStaffManager(staffManager).hasGlobalPermission(
-                msg.sender,
-                permissionBit
-            )
-        ) {
+        address staffManager = IBranchModuleManager(branchModuleManager).getBranchStaffManager(branchId);
+        if (!IBranchStaffManager(staffManager).hasGlobalPermission(msg.sender, permissionBit)) {
             revert AccessDenied();
         }
         _;
     }
 
     // Modifier 2: Yêu cầu quyền Module (Ví dụ: MEOS PC Manager)
-    modifier requiresModulePermission(
-        bytes32 moduleKey,
-        uint256 permissionBit
-    ) {
-        address staffManager = IBranchModuleManager(branchModuleManager)
-            .getBranchStaffManager(branchId);
-        if (
-            !IBranchStaffManager(staffManager).hasModulePermission(
-                msg.sender,
-                moduleKey,
-                permissionBit
-            )
-        ) {
+    modifier requiresModulePermission(bytes32 moduleKey, uint256 permissionBit) {
+        address staffManager = IBranchModuleManager(branchModuleManager).getBranchStaffManager(branchId);
+        if (!IBranchStaffManager(staffManager).hasModulePermission(msg.sender, moduleKey, permissionBit)) {
             revert AccessDenied();
         }
         _;
     }
 
-    function __BranchContext_init(
-        uint48 _branchId,
-        uint48 _orgId,
-        address _branchModuleManager
-    ) internal onlyInitializing {
+    function __BranchContext_init(uint48 _branchId, uint48 _orgId, address _branchModuleManager)
+        internal
+        onlyInitializing
+    {
         branchId = _branchId;
         orgId = _orgId;
         branchModuleManager = _branchModuleManager;

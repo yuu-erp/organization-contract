@@ -87,10 +87,7 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
             new BeaconProxy(
                 staffManagerBeacon,
                 abi.encodeWithSignature(
-                    "initialize(uint48,uint48,address)",
-                    branchId,
-                    orgId,
-                    address(organizationManager)
+                    "initialize(uint48,uint48,address)", branchId, orgId, address(organizationManager)
                 )
             )
         );

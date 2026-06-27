@@ -41,12 +41,7 @@ contract DeployFullSystem is Script {
         // 1. Deploy SystemAccessControl (UUPS Proxy)
         address sacImpl = address(new SystemAccessControl());
         SystemAccessControl sacProxy = SystemAccessControl(
-            address(
-                new ERC1967Proxy(
-                    sacImpl,
-                    abi.encodeCall(SystemAccessControl.initialize, (deployer))
-                )
-            )
+            address(new ERC1967Proxy(sacImpl, abi.encodeCall(SystemAccessControl.initialize, (deployer))))
         );
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, deployer);
         sacProxy.grantRole(RoleHashes.OPS_ADMIN_ROLE, deployer);
@@ -62,15 +57,7 @@ contract DeployFullSystem is Script {
         // 2. Deploy OrganizationManager (UUPS Proxy)
         address omImpl = address(new OrganizationManager());
         OrganizationManager omProxy = OrganizationManager(
-            address(
-                new ERC1967Proxy(
-                    omImpl,
-                    abi.encodeCall(
-                        OrganizationManager.initialize,
-                        (address(sacProxy))
-                    )
-                )
-            )
+            address(new ERC1967Proxy(omImpl, abi.encodeCall(OrganizationManager.initialize, (address(sacProxy)))))
         );
 
         // 3. Deploy OrganizationMetadataRegistry (UUPS Proxy)
@@ -79,10 +66,7 @@ contract DeployFullSystem is Script {
             address(
                 new ERC1967Proxy(
                     omrImpl,
-                    abi.encodeCall(
-                        OrganizationMetadataRegistry.initialize,
-                        (address(sacProxy), address(omProxy))
-                    )
+                    abi.encodeCall(OrganizationMetadataRegistry.initialize, (address(sacProxy), address(omProxy)))
                 )
             )
         );
@@ -90,15 +74,7 @@ contract DeployFullSystem is Script {
         // 4. Deploy ModuleRegistry (UUPS Proxy)
         address mrImpl = address(new ModuleRegistry());
         ModuleRegistry mrProxy = ModuleRegistry(
-            address(
-                new ERC1967Proxy(
-                    mrImpl,
-                    abi.encodeCall(
-                        ModuleRegistry.initialize,
-                        (address(sacProxy))
-                    )
-                )
-            )
+            address(new ERC1967Proxy(mrImpl, abi.encodeCall(ModuleRegistry.initialize, (address(sacProxy)))))
         );
 
         // 5. Deploy BranchStaffManager implementation + UpgradeableBeacon
@@ -139,9 +115,7 @@ contract DeployFullSystem is Script {
         {
             address posBeacon = address(new UpgradeableBeacon(address(new POSManager()), deployer));
             IqrFactory iqrFactory = new IqrFactory(
-                address(new UpgradeableBeacon(address(new IqrRoot()), deployer)),
-                posBeacon,
-                address(bmmProxy)
+                address(new UpgradeableBeacon(address(new IqrRoot()), deployer)), posBeacon, address(bmmProxy)
             );
             mrProxy.registerModule(ModuleKeys.MODULE_IQR, "IQR", address(iqrFactory));
         }
@@ -150,19 +124,13 @@ contract DeployFullSystem is Script {
         {
             address pointBeacon = address(new UpgradeableBeacon(address(new PointManager()), deployer));
             LoyaltyFactory loyaltyFactory = new LoyaltyFactory(
-                address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer)),
-                pointBeacon,
-                address(bmmProxy)
+                address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer)), pointBeacon, address(bmmProxy)
             );
             mrProxy.registerModule(ModuleKeys.MODULE_LOYALTY, "LOYALTY", address(loyaltyFactory));
         }
 
         // 8. Deploy OrganizationReader (Plain view contract)
-        OrganizationReader reader = new OrganizationReader(
-            address(omProxy),
-            address(omrProxy),
-            deployer
-        );
+        OrganizationReader reader = new OrganizationReader(address(omProxy), address(omrProxy), deployer);
 
         // Grant roles to contracts
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, address(omProxy));
@@ -177,26 +145,48 @@ contract DeployFullSystem is Script {
             abi.encodePacked(
                 "{\n",
                 "  \"SystemAccessControl\": {\n",
-                "    \"impl\": \"", vm.toString(sacImpl), "\",\n",
-                "    \"proxy\": \"", vm.toString(address(sacProxy)), "\"\n",
+                "    \"impl\": \"",
+                vm.toString(sacImpl),
+                "\",\n",
+                "    \"proxy\": \"",
+                vm.toString(address(sacProxy)),
+                "\"\n",
                 "  },\n",
                 "  \"OrganizationManager\": {\n",
-                "    \"impl\": \"", vm.toString(omImpl), "\",\n",
-                "    \"proxy\": \"", vm.toString(address(omProxy)), "\"\n",
+                "    \"impl\": \"",
+                vm.toString(omImpl),
+                "\",\n",
+                "    \"proxy\": \"",
+                vm.toString(address(omProxy)),
+                "\"\n",
                 "  },\n",
                 "  \"OrganizationMetadataRegistry\": {\n",
-                "    \"impl\": \"", vm.toString(omrImpl), "\",\n",
-                "    \"proxy\": \"", vm.toString(address(omrProxy)), "\"\n",
+                "    \"impl\": \"",
+                vm.toString(omrImpl),
+                "\",\n",
+                "    \"proxy\": \"",
+                vm.toString(address(omrProxy)),
+                "\"\n",
                 "  },\n",
                 "  \"ModuleRegistry\": {\n",
-                "    \"impl\": \"", vm.toString(mrImpl), "\",\n",
-                "    \"proxy\": \"", vm.toString(address(mrProxy)), "\"\n",
+                "    \"impl\": \"",
+                vm.toString(mrImpl),
+                "\",\n",
+                "    \"proxy\": \"",
+                vm.toString(address(mrProxy)),
+                "\"\n",
                 "  },\n",
                 "  \"BranchModuleManager\": {\n",
-                "    \"impl\": \"", vm.toString(bmmImpl), "\",\n",
-                "    \"proxy\": \"", vm.toString(address(bmmProxy)), "\"\n",
+                "    \"impl\": \"",
+                vm.toString(bmmImpl),
+                "\",\n",
+                "    \"proxy\": \"",
+                vm.toString(address(bmmProxy)),
+                "\"\n",
                 "  },\n",
-                "  \"OrganizationReader\": \"", vm.toString(address(reader)), "\"\n",
+                "  \"OrganizationReader\": \"",
+                vm.toString(address(reader)),
+                "\"\n",
                 "}"
             )
         );

@@ -6,18 +6,11 @@ import {BranchTypes} from "../../types/BranchTypes.sol";
 
 interface IOrganizationMetadataRegistry {
     event OrganizationMetadataUpdated(
-        uint48 indexed organizationId,
-        string name,
-        string organizationAddress,
-        string phoneNumber
+        uint48 indexed organizationId, string name, string organizationAddress, string phoneNumber
     );
 
     event BranchMetadataUpdated(
-        uint48 indexed branchId,
-        string name,
-        string organizationAddress,
-        string phoneNumber,
-        string code
+        uint48 indexed branchId, string name, string organizationAddress, string phoneNumber, string code
     );
 
     error InvalidAddress();

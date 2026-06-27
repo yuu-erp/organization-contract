@@ -8,25 +8,12 @@ import {OrganizationTypes} from "../types/OrganizationTypes.sol";
 import {BranchTypes} from "../types/BranchTypes.sol";
 
 interface IOrganizationManagerGetter {
-    function organizations(uint48 orgId)
-        external
-        view
-        returns (
-            address owner,
-            uint48 id,
-            bool active,
-            bool exists
-        );
+    function organizations(uint48 orgId) external view returns (address owner, uint48 id, bool active, bool exists);
 
     function branches(uint48 branchId)
         external
         view
-        returns (
-            address owner,
-            uint48 organizationId,
-            bool active,
-            bool exists
-        );
+        returns (address owner, uint48 organizationId, bool active, bool exists);
 
     function getOrganizationBranches(uint48 organizationId) external view returns (uint48[] memory);
 }
@@ -41,11 +28,7 @@ contract OrganizationReader is IOrganizationReader, Ownable {
 
     event ContractsUpdated(address indexed organizationManager, address indexed metadataRegistry);
 
-    constructor(
-        address _organizationManager,
-        address _metadataRegistry,
-        address _initialOwner
-    ) Ownable(_initialOwner) {
+    constructor(address _organizationManager, address _metadataRegistry, address _initialOwner) Ownable(_initialOwner) {
         if (_organizationManager == address(0) || _metadataRegistry == address(0)) {
             revert InvalidAddress();
         }
@@ -94,16 +77,15 @@ contract OrganizationReader is IOrganizationReader, Ownable {
             phoneNumber = meta.phoneNumber;
         } catch {}
 
-        return
-            FullOrganizationInfo({
-                id: id,
-                owner: owner,
-                active: active,
-                exists: exists,
-                name: name,
-                organizationAddress: orgAddress,
-                phoneNumber: phoneNumber
-            });
+        return FullOrganizationInfo({
+            id: id,
+            owner: owner,
+            active: active,
+            exists: exists,
+            name: name,
+            organizationAddress: orgAddress,
+            phoneNumber: phoneNumber
+        });
     }
 
     /**
@@ -128,18 +110,17 @@ contract OrganizationReader is IOrganizationReader, Ownable {
             code = meta.code;
         } catch {}
 
-        return
-            FullBranchInfo({
-                id: branchId,
-                owner: owner,
-                organizationId: organizationId,
-                active: active,
-                exists: exists,
-                name: name,
-                organizationAddress: orgAddress,
-                phoneNumber: phoneNumber,
-                code: code
-            });
+        return FullBranchInfo({
+            id: branchId,
+            owner: owner,
+            organizationId: organizationId,
+            active: active,
+            exists: exists,
+            name: name,
+            organizationAddress: orgAddress,
+            phoneNumber: phoneNumber,
+            code: code
+        });
     }
 
     /**

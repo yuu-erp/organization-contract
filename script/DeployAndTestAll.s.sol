@@ -132,9 +132,7 @@ contract DeployAndTestAll is Script {
         {
             address posBeacon = address(new UpgradeableBeacon(address(new POSManager()), deployer));
             IqrFactory iqrFactory = new IqrFactory(
-                address(new UpgradeableBeacon(address(new IqrRoot()), deployer)),
-                posBeacon,
-                address(bmmProxy)
+                address(new UpgradeableBeacon(address(new IqrRoot()), deployer)), posBeacon, address(bmmProxy)
             );
             mrProxy.registerModule(ModuleKeys.MODULE_IQR, "IQR", address(iqrFactory));
         }
@@ -142,9 +140,7 @@ contract DeployAndTestAll is Script {
         {
             address pointBeacon = address(new UpgradeableBeacon(address(new PointManager()), deployer));
             LoyaltyFactory loyaltyFactory = new LoyaltyFactory(
-                address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer)),
-                pointBeacon,
-                address(bmmProxy)
+                address(new UpgradeableBeacon(address(new LoyaltyRoot()), deployer)), pointBeacon, address(bmmProxy)
             );
             mrProxy.registerModule(ModuleKeys.MODULE_LOYALTY, "LOYALTY", address(loyaltyFactory));
         }
