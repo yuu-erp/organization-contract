@@ -89,20 +89,24 @@ contract OrganizationReader is IOrganizationReader, Ownable {
     }
 
     /**
-     * @dev Lấy đầy đủ thông tin của Branch bao gồm cả core và metadata.
+     * @dev Lấy đầy đủ thông tin của Branch (Hàm External cho Frontend)
      */
     function getFullBranchInfo(uint48 branchId) external view override returns (FullBranchInfo memory) {
+        return _getFullBranchInfo(branchId);
+    }
+
+    /**
+     * @dev Logic cốt lõi để lấy Branch (Hàm Internal để dùng nội bộ, tiết kiệm overhead)
+     */
+    function _getFullBranchInfo(uint48 branchId) internal view returns (FullBranchInfo memory) {
         (address owner, uint48 organizationId, bool active, bool exists) = organizationManager.branches(branchId);
-        if (!exists) {
-            revert BranchNotFound();
-        }
+        if (!exists) revert BranchNotFound();
 
         string memory name = "";
         string memory orgAddress = "";
         string memory phoneNumber = "";
         string memory code = "";
 
-        // Tránh revert nếu chưa thiết lập Metadata (trả về các trường rỗng)
         try metadataRegistry.getBranchMetadata(branchId) returns (BranchTypes.BranchMetadata memory meta) {
             name = meta.name;
             orgAddress = meta.organizationAddress;
@@ -124,7 +128,7 @@ contract OrganizationReader is IOrganizationReader, Ownable {
     }
 
     /**
-     * @dev Lấy danh sách đầy đủ thông tin tất cả các Branch của một Organization.
+     * @dev Lấy danh sách đầy đủ thông tin tất cả các Branch.
      */
     function getOrganizationBranchesFull(uint48 organizationId)
         external
@@ -138,7 +142,8 @@ contract OrganizationReader is IOrganizationReader, Ownable {
         FullBranchInfo[] memory fullBranches = new FullBranchInfo[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            fullBranches[i] = this.getFullBranchInfo(branchIds[i]);
+            // Thay `this.getFullBranchInfo` bằng `_getFullBranchInfo`
+            fullBranches[i] = _getFullBranchInfo(branchIds[i]); 
         }
 
         return fullBranches;

@@ -10,7 +10,9 @@ import {OrganizationManager} from "../src/core/OrganizationManager.sol";
 import {ModuleRegistry} from "../src/registry/ModuleRegistry.sol";
 import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
-import {BranchGovernanceManager, ProposalType, ProposalState} from "../src/core/BranchGovernanceManager.sol";
+import {BranchGovernanceManager} from "../src/core/BranchGovernanceManager.sol";
+import {IBranchGovernanceManager} from "../src/core/interfaces/IBranchGovernanceManager.sol";
+import {GovernanceTypes} from "../src/types/GovernanceTypes.sol";
 import {StaffMetadataRegistry} from "../src/registry/StaffMetadataRegistry.sol";
 import {IStaffMetadataRegistry} from "../src/registry/interfaces/IStaffMetadataRegistry.sol";
 import {StaffTypes} from "../src/types/StaffTypes.sol";
@@ -147,7 +149,7 @@ contract BranchGovernanceDecoupledTest is Test {
 
         // 3. Create proposal to add manager (using governanceManager)
         uint256 propId = governanceManager.createProposal(
-            ProposalType.AddOrUpdateProfile,
+            GovernanceTypes.ProposalType.AddOrUpdateProfile,
             branchManager,
             2, // ROLE_MANAGER
             0,
@@ -162,7 +164,7 @@ contract BranchGovernanceDecoupledTest is Test {
         governanceManager.voteProposal(propId, true);
         
         // Try to execute before majority -> fails
-        vm.expectRevert(BranchGovernanceManager.ProposalCannotBeExecuted.selector);
+        vm.expectRevert(IBranchGovernanceManager.ProposalCannotBeExecuted.selector);
         governanceManager.executeProposal(propId, "", "", "");
         vm.stopPrank();
 
@@ -190,7 +192,7 @@ contract BranchGovernanceDecoupledTest is Test {
 
         // 3. Create proposal to update metadata
         uint256 propId = governanceManager.createProposal(
-            ProposalType.UpdateMetadata,
+            GovernanceTypes.ProposalType.UpdateMetadata,
             branchCoOwner,
             0,
             0,
@@ -223,7 +225,7 @@ contract BranchGovernanceDecoupledTest is Test {
 
         vm.startPrank(orgOwner);
         uint256 propId = governanceManager.createProposal(
-            ProposalType.UpdateMetadata,
+            GovernanceTypes.ProposalType.UpdateMetadata,
             branchCoOwner,
             0,
             0,
@@ -242,7 +244,7 @@ contract BranchGovernanceDecoupledTest is Test {
 
         // Execute proposal with mismatch payload -> fails
         vm.prank(orgOwner);
-        vm.expectRevert(BranchGovernanceManager.InvalidProposalPayload.selector);
+        vm.expectRevert(IBranchGovernanceManager.HashMismatch.selector); 
         governanceManager.executeProposal(propId, "Mismatch Name", "12345678", "avatar_voted");
     }
 }
