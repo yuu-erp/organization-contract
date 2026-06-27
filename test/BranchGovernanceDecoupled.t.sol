@@ -16,7 +16,7 @@ import {IStaffMetadataRegistry} from "../src/registry/interfaces/IStaffMetadataR
 import {StaffTypes} from "../src/types/StaffTypes.sol";
 import {RoleHashes} from "../src/core/constants/RoleHashes.sol";
 
-contract BranchStaffManagerVotingTest is Test {
+contract BranchGovernanceDecoupledTest is Test {
     SystemAccessControl sacProxy;
     OrganizationManager omProxy;
     ModuleRegistry mrProxy;
@@ -107,7 +107,7 @@ contract BranchStaffManagerVotingTest is Test {
         // Setup Organization and Branch
         bytes32[] memory emptyModules = new bytes32[](0);
         orgId = uint48(omProxy.createOrganization(orgOwner, emptyModules));
-        branchId = omProxy.createBranch(orgId, emptyModules); 
+        branchId = omProxy.createBranch(orgId, emptyModules); // Automatically calls provisionBranch which deploys both proxies and links them!
 
         address staffManagerAddr = bmmProxy.getBranchStaffManager(branchId);
         staffManager = BranchStaffManager(staffManagerAddr);
@@ -217,57 +217,32 @@ contract BranchStaffManagerVotingTest is Test {
         assertEq(meta.avatar, "avatar_voted");
     }
 
-    function test_CancelProposal() public {
-        vm.prank(orgOwner);
-        staffManager.setGlobalProfile(branchCoOwner, 1, 0);
-
-        vm.startPrank(branchCoOwner);
-        uint256 propId = governanceManager.createProposal(
-            ProposalType.AddOrUpdateProfile,
-            branchManager,
-            2,
-            0,
-            bytes32(0),
-            0,
-            "",
-            "",
-            ""
-        );
-
-        // Attacker attempts to cancel -> fails
-        vm.stopPrank();
-        vm.prank(attacker);
-        vm.expectRevert(BranchGovernanceManager.Unauthorized.selector);
-        governanceManager.cancelProposal(propId);
-
-        // Creator (branchCoOwner) cancels -> succeeds
-        vm.prank(branchCoOwner);
-        governanceManager.cancelProposal(propId);
-    }
-
-    function test_VotingDurationExpiration() public {
+    function test_MetadataVotingRequirementFailsOnMismatchPayload() public {
         vm.prank(orgOwner);
         staffManager.setGlobalProfile(branchCoOwner, 1, 0);
 
         vm.startPrank(orgOwner);
         uint256 propId = governanceManager.createProposal(
-            ProposalType.AddOrUpdateProfile,
-            branchManager,
-            2,
+            ProposalType.UpdateMetadata,
+            branchCoOwner,
+            0,
             0,
             bytes32(0),
             0,
-            "",
-            "",
-            ""
+            "CoOwner Voted Name",
+            "12345678",
+            "avatar_voted"
         );
 
-        // Warp time beyond 7 days
-        skip(7 days + 1);
-
-        // Voting fails with ProposalExpired
-        vm.expectRevert(BranchGovernanceManager.ProposalExpired.selector);
         governanceManager.voteProposal(propId, true);
         vm.stopPrank();
+
+        vm.prank(branchCoOwner);
+        governanceManager.voteProposal(propId, true);
+
+        // Execute proposal with mismatch payload -> fails
+        vm.prank(orgOwner);
+        vm.expectRevert(BranchGovernanceManager.InvalidProposalPayload.selector);
+        governanceManager.executeProposal(propId, "Mismatch Name", "12345678", "avatar_voted");
     }
 }

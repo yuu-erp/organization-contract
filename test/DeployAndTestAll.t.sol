@@ -10,6 +10,8 @@ import {OrganizationManager} from "../src/core/OrganizationManager.sol";
 import {ModuleRegistry} from "../src/registry/ModuleRegistry.sol";
 import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
+import {BranchGovernanceManager} from "../src/core/BranchGovernanceManager.sol";
+import {StaffMetadataRegistry} from "../src/registry/StaffMetadataRegistry.sol";
 
 import {MeosRoot} from "../src/modules/meos/MeosRoot.sol";
 import {PCManager} from "../src/modules/meos/PCManager.sol";
@@ -90,6 +92,10 @@ contract DeployAndTestAllTest is Test {
         BranchStaffManager staffManagerImpl = new BranchStaffManager();
         UpgradeableBeacon staffBeacon = new UpgradeableBeacon(address(staffManagerImpl), deployer);
 
+        // Deploy BranchGovernanceManager implementation + UpgradeableBeacon
+        BranchGovernanceManager governanceImpl = new BranchGovernanceManager();
+        UpgradeableBeacon govBeacon = new UpgradeableBeacon(address(governanceImpl), deployer);
+
         // 5. Deploy BranchModuleManager (UUPS Proxy)
         BranchModuleManager bmmImpl = new BranchModuleManager();
         bmmProxy = BranchModuleManager(
@@ -103,6 +109,22 @@ contract DeployAndTestAllTest is Test {
                 )
             )
         );
+
+        // Deploy StaffMetadataRegistry (UUPS Proxy)
+        StaffMetadataRegistry smrImpl = new StaffMetadataRegistry();
+        StaffMetadataRegistry smrProxy = StaffMetadataRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(smrImpl),
+                    abi.encodeCall(
+                        StaffMetadataRegistry.initialize, (address(sacProxy), address(omProxy), address(bmmProxy))
+                    )
+                )
+            )
+        );
+
+        // Configure Governance Beacon and StaffMetadataRegistry in BranchModuleManager
+        bmmProxy.setGovernanceAndRegistry(address(govBeacon), address(smrProxy));
 
         // Grant roles to contracts
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, address(omProxy));

@@ -58,4 +58,11 @@ abstract contract BranchModuleManagerStorage {
      * branchId => bool
      */
     mapping(uint256 => bool) public branchProvisioned;
+
+    // ====== CÁC BIẾN MỚI CHO GOVERNANCE PHÂN TÁCH ======
+    address public governanceBeacon;
+    address public staffMetadataRegistry;
+    mapping(uint256 => address) public branchGovernanceManagers;
+
+    uint256[47] private __gap;
 }

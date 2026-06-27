@@ -14,6 +14,7 @@ import {StaffMetadataRegistry} from "../src/registry/StaffMetadataRegistry.sol";
 import {IStaffMetadataRegistry} from "../src/registry/interfaces/IStaffMetadataRegistry.sol";
 import {StaffTypes} from "../src/types/StaffTypes.sol";
 import {RoleHashes} from "../src/core/constants/RoleHashes.sol";
+import {BranchGovernanceManager} from "../src/core/BranchGovernanceManager.sol";
 
 contract StaffMetadataRegistryTest is Test {
     SystemAccessControl sacProxy;
@@ -62,6 +63,10 @@ contract StaffMetadataRegistryTest is Test {
         BranchStaffManager staffManagerImpl = new BranchStaffManager();
         UpgradeableBeacon staffBeacon = new UpgradeableBeacon(address(staffManagerImpl), deployer);
 
+        // Deploy BranchGovernanceManager implementation + UpgradeableBeacon
+        BranchGovernanceManager governanceImpl = new BranchGovernanceManager();
+        UpgradeableBeacon govBeacon = new UpgradeableBeacon(address(governanceImpl), deployer);
+
         // 5. Deploy BranchModuleManager (UUPS Proxy)
         BranchModuleManager bmmImpl = new BranchModuleManager();
         bmmProxy = BranchModuleManager(
@@ -88,6 +93,9 @@ contract StaffMetadataRegistryTest is Test {
                 )
             )
         );
+
+        // Configure Governance Beacon and StaffMetadataRegistry in BranchModuleManager
+        bmmProxy.setGovernanceAndRegistry(address(govBeacon), address(smrProxy));
 
         // Grant roles to contracts
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, address(omProxy));
@@ -178,7 +186,7 @@ contract StaffMetadataRegistryTest is Test {
     function test_RevertWhenAttackerAttemptsToUpdateStaffMetadata() public {
         vm.startPrank(attacker);
 
-        vm.expectRevert(IStaffMetadataRegistry.Unauthorized.selector);
+        vm.expectRevert(StaffMetadataRegistry.Unauthorized.selector);
         smrProxy.setStaffMetadata(branchId, staff1, "Attacker name", "0666666666", "avatar_hash_attacker");
 
         vm.stopPrank();
@@ -187,7 +195,7 @@ contract StaffMetadataRegistryTest is Test {
     function test_RevertWhenStaffAttemptsToUpdateAnotherStaffMetadata() public {
         vm.startPrank(staff1);
 
-        vm.expectRevert(IStaffMetadataRegistry.Unauthorized.selector);
+        vm.expectRevert(StaffMetadataRegistry.Unauthorized.selector);
         smrProxy.setStaffMetadata(branchId, staff2, "Modified by Peer", "0555555555", "avatar_hash_peer");
 
         vm.stopPrank();

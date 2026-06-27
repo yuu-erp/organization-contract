@@ -17,14 +17,15 @@ import {IModuleFactory} from "./interfaces/IModuleFactory.sol";
 
 import {BranchModuleManagerStorage} from "./storage/BranchModuleManagerStorage.sol";
 
+interface IBranchStaffManagerInit {
+    function initialize(uint48 _branchId, uint48 _orgId, address _organizationManager) external;
+    function setBranchGovernanceManager(address _govManager) external;
+    function setStaffMetadataRegistry(address _registry) external;
+}
+
 /**
  * @title BranchModuleManager
- * @dev Orchestrator chính: provision branch, deploy shared services và module bundles. (Đã đồng bộ uint48)
- *
- * Flow:
- * 1. provisionBranch(branchId, orgId) → deploy BranchStaffManager
- * 2. enableModule(branchId, moduleKey) → gọi factory deploy module bundle
- * 3. disableModule(branchId, moduleKey) → soft disable
+ * @dev Orchestrator chính: provision branch, deploy các dịch vụ dùng chung (StaffManager & GovernanceManager).
  */
 contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleManagerStorage, IBranchModuleManager {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -65,14 +66,25 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
         _;
     }
 
+    // ====== Setters ======
+    
+    /**
+     * @dev Cập nhật Beacon Governance và Registry Metadata tập trung.
+     */
+    function setGovernanceAndRegistry(address _govBeacon, address _metadataRegistry) external onlyPlatformAdmin {
+        if (_govBeacon == address(0) || _metadataRegistry == address(0)) {
+            revert InvalidAddress();
+        }
+        governanceBeacon = _govBeacon;
+        staffMetadataRegistry = _metadataRegistry;
+    }
+
     // ====== Core Functions ======
 
     /**
-     * @dev Provision branch: deploy BranchStaffManager (shared service).
-     * Phải gọi trước khi enableModule.
+     * @dev Provision branch: deploy BranchStaffManager và BranchGovernanceManager.
      */
     function provisionBranch(uint48 branchId, uint48 orgId) external onlyPlatformAdmin {
-        // Validate branch exists
         if (!organizationManager.branchExists(branchId)) {
             revert InvalidInput();
         }
@@ -81,8 +93,11 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
             revert BranchAlreadyProvisioned();
         }
 
-        // Deploy BranchStaffManager via Beacon Proxy
-        // CHÚ Ý: Đã cập nhật signature thành uint48 để khớp với kiến trúc mới
+        if (governanceBeacon == address(0) || staffMetadataRegistry == address(0)) {
+            revert InvalidInput(); // Yêu cầu cấu hình Beacon Gov và Registry trước
+        }
+
+        // 1. Deploy BranchStaffManager via Beacon Proxy
         address staffManager = address(
             new BeaconProxy(
                 staffManagerBeacon,
@@ -92,7 +107,28 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
             )
         );
 
+        // 2. Deploy BranchGovernanceManager via Beacon Proxy
+        address govManager = address(
+            new BeaconProxy(
+                governanceBeacon,
+                abi.encodeWithSignature(
+                    "initialize(uint48,uint48,address,address,address)",
+                    branchId,
+                    orgId,
+                    address(organizationManager),
+                    staffManager,
+                    staffMetadataRegistry
+                )
+            )
+        );
+
+        // 3. Liên kết chéo
+        IBranchStaffManagerInit(staffManager).setBranchGovernanceManager(govManager);
+        IBranchStaffManagerInit(staffManager).setStaffMetadataRegistry(staffMetadataRegistry);
+
+        // Lưu state
         branchStaffManagers[branchId] = staffManager;
+        branchGovernanceManagers[branchId] = govManager;
         branchProvisioned[branchId] = true;
 
         emit BranchProvisioned(branchId, orgId, staffManager);
@@ -100,7 +136,6 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
 
     /**
      * @dev Enable module cho branch.
-     * Gọi factory tương ứng để deploy toàn bộ module bundle.
      */
     function enableModule(uint48 branchId, bytes32 moduleKey) external onlyPlatformAdmin returns (address moduleRoot) {
         if (!branchProvisioned[branchId]) {
@@ -111,26 +146,20 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
             revert ModuleAlreadyEnabled();
         }
 
-        // Lấy orgId từ branch (Đã cập nhật type uint48)
         uint48 orgId = organizationManager.getBranchOrgId(branchId);
 
-        // Check org đã subscribe module này chưa
         if (!moduleRegistry.isOrgSubscribed(orgId, moduleKey)) {
             revert OrgNotSubscribedToModule();
         }
 
-        // Check module active
         if (!moduleRegistry.isModuleActive(moduleKey)) {
             revert OrgNotSubscribedToModule();
         }
 
-        // Lấy factory address
         address factoryAddress = moduleRegistry.getModuleFactory(moduleKey);
 
-        // Gọi factory deploy module bundle
         moduleRoot = IModuleFactory(factoryAddress).deployModule(branchId, orgId, branchStaffManagers[branchId]);
 
-        // Lưu state
         branchModuleRoots[branchId][moduleKey] = moduleRoot;
         branchEnabledModules[branchId].add(moduleKey);
 
@@ -138,7 +167,7 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
     }
 
     /**
-     * @dev Disable module (soft — giữ data, chỉ remove khỏi enabled set).
+     * @dev Disable module.
      */
     function disableModule(uint48 branchId, bytes32 moduleKey) external onlyPlatformAdmin {
         if (!branchEnabledModules[branchId].contains(moduleKey)) {
@@ -146,38 +175,23 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
         }
 
         branchEnabledModules[branchId].remove(moduleKey);
-
-        // Không xóa branchModuleRoots → giữ reference để query data cũ
-
         emit ModuleDisabled(branchId, moduleKey);
     }
 
     // ====== View Functions ======
 
-    /**
-     * @dev Kiểm tra branch đã provision chưa.
-     */
     function isBranchProvisioned(uint48 branchId) external view returns (bool) {
         return branchProvisioned[branchId];
     }
 
-    /**
-     * @dev Lấy StaffManager address.
-     */
     function getBranchStaffManager(uint48 branchId) external view returns (address) {
         return branchStaffManagers[branchId];
     }
 
-    /**
-     * @dev Lấy module root address.
-     */
     function getModuleRoot(uint48 branchId, bytes32 moduleKey) external view returns (address) {
         return branchModuleRoots[branchId][moduleKey];
     }
 
-    /**
-     * @dev Lấy danh sách module keys + addresses đang enabled của branch.
-     */
     function getBranchModules(uint48 branchId) external view returns (bytes32[] memory keys, address[] memory roots) {
         EnumerableSet.Bytes32Set storage modules = branchEnabledModules[branchId];
         uint256 length = modules.length();
@@ -192,18 +206,12 @@ contract BranchModuleManager is Initializable, UUPSUpgradeable, BranchModuleMana
         }
     }
 
-    /**
-     * @dev Kiểm tra module đang enabled cho branch không.
-     */
     function isModuleEnabled(uint48 branchId, bytes32 moduleKey) external view returns (bool) {
         return branchEnabledModules[branchId].contains(moduleKey);
     }
 
     // ====== Internal ======
 
-    /**
-     * @dev Chỉ DEFAULT_ADMIN mới được nâng cấp.
-     */
     function _authorizeUpgrade(address newImplementation) internal override {
         if (!accessControl.hasRole(RoleHashes.DEFAULT_ADMIN_ROLE, msg.sender)) {
             revert Unauthorized();

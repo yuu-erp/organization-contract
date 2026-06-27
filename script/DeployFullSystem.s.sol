@@ -11,6 +11,8 @@ import {OrganizationMetadataRegistry} from "../src/registry/OrganizationMetadata
 import {ModuleRegistry} from "../src/registry/ModuleRegistry.sol";
 import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
+import {BranchGovernanceManager} from "../src/core/BranchGovernanceManager.sol";
+import {StaffMetadataRegistry} from "../src/registry/StaffMetadataRegistry.sol";
 
 import {MeosRoot} from "../src/modules/meos/MeosRoot.sol";
 import {PCManager} from "../src/modules/meos/PCManager.sol";
@@ -94,6 +96,25 @@ contract DeployFullSystem is Script {
             )
         );
 
+        // Deploy BranchGovernanceManager implementation + UpgradeableBeacon
+        UpgradeableBeacon govBeacon = new UpgradeableBeacon(address(new BranchGovernanceManager()), deployer);
+
+        // Deploy StaffMetadataRegistry (UUPS Proxy)
+        address smrImpl = address(new StaffMetadataRegistry());
+        StaffMetadataRegistry smrProxy = StaffMetadataRegistry(
+            address(
+                new ERC1967Proxy(
+                    smrImpl,
+                    abi.encodeCall(
+                        StaffMetadataRegistry.initialize, (address(sacProxy), address(omProxy), address(bmmProxy))
+                    )
+                )
+            )
+        );
+
+        // Configure Governance Beacon and StaffMetadataRegistry in BranchModuleManager
+        bmmProxy.setGovernanceAndRegistry(address(govBeacon), address(smrProxy));
+
         // Link OrganizationManager to ModuleRegistry and BranchModuleManager
         omProxy.setRegistryAndManager(address(mrProxy), address(bmmProxy));
 
@@ -137,6 +158,7 @@ contract DeployFullSystem is Script {
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, address(omrProxy));
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, address(mrProxy));
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, address(bmmProxy));
+        sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, address(smrProxy));
 
         vm.stopBroadcast();
 
@@ -184,6 +206,17 @@ contract DeployFullSystem is Script {
                 vm.toString(address(bmmProxy)),
                 "\"\n",
                 "  },\n",
+                "  \"StaffMetadataRegistry\": {\n",
+                "    \"impl\": \"",
+                vm.toString(smrImpl),
+                "\",\n",
+                "    \"proxy\": \"",
+                vm.toString(address(smrProxy)),
+                "\"\n",
+                "  },\n",
+                "  \"BranchGovernanceBeacon\": \"",
+                vm.toString(address(govBeacon)),
+                "\",\n",
                 "  \"OrganizationReader\": \"",
                 vm.toString(address(reader)),
                 "\"\n",
