@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { contractManager } from "../contracts/contract-manager";
 import type { FullBranchInfo } from "../contracts/organization-reader/organization-reader.contract";
 import { MODULE_KEYS } from "../constants/modules";
+import { MtnContract } from "@metanodejs/mtn-contract";
 
 export const Route = createFileRoute("/branch/$id")({
   component: BranchDetail,
@@ -42,6 +43,12 @@ function BranchDetail() {
     loyaltyFactory: string;
   } | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [subContracts, setSubContracts] = useState<{
+    pcManager: string;
+    accountManager: string;
+    posManager: string;
+    pointManager: string;
+  } | null>(null);
 
   // Authentication & initialization
   const handleConnectWallet = async () => {
@@ -110,6 +117,95 @@ function BranchDetail() {
         iqrFactory,
         loyaltyFactory,
       });
+
+      // 5. Fetch sub-contracts for each active module root proxy
+      let pcManager = "0x0000000000000000000000000000000000000000";
+      let accountManager = "0x0000000000000000000000000000000000000000";
+      let posManager = "0x0000000000000000000000000000000000000000";
+      let pointManager = "0x0000000000000000000000000000000000000000";
+
+      if (meos && meos !== "0x0000000000000000000000000000000000000000") {
+        try {
+          const meosContract = new MtnContract({ from: _address, to: meos });
+          const [pc, acc] = await Promise.all([
+            meosContract.sendTransaction<string>({
+              abiData: {
+                type: "function",
+                name: "pcManager",
+                inputs: [],
+                outputs: [{ name: "", type: "address" }],
+                stateMutability: "view",
+              },
+              functionName: "pcManager",
+              inputData: {},
+              feeType: "read",
+            }),
+            meosContract.sendTransaction<string>({
+              abiData: {
+                type: "function",
+                name: "accountManager",
+                inputs: [],
+                outputs: [{ name: "", type: "address" }],
+                stateMutability: "view",
+              },
+              functionName: "accountManager",
+              inputData: {},
+              feeType: "read",
+            }),
+          ]);
+          pcManager = pc;
+          accountManager = acc;
+        } catch (e) {
+          console.error("Failed to fetch MEOS sub contracts", e);
+        }
+      }
+
+      if (iqr && iqr !== "0x0000000000000000000000000000000000000000") {
+        try {
+          const iqrContract = new MtnContract({ from: _address, to: iqr });
+          posManager = await iqrContract.sendTransaction<string>({
+            abiData: {
+              type: "function",
+              name: "posManager",
+              inputs: [],
+              outputs: [{ name: "", type: "address" }],
+              stateMutability: "view",
+              },
+            functionName: "posManager",
+            inputData: {},
+            feeType: "read",
+          });
+        } catch (e) {
+          console.error("Failed to fetch IQR sub contracts", e);
+        }
+      }
+
+      if (loyalty && loyalty !== "0x0000000000000000000000000000000000000000") {
+        try {
+          const loyaltyContract = new MtnContract({ from: _address, to: loyalty });
+          pointManager = await loyaltyContract.sendTransaction<string>({
+            abiData: {
+              type: "function",
+              name: "pointManager",
+              inputs: [],
+              outputs: [{ name: "", type: "address" }],
+              stateMutability: "view",
+            },
+            functionName: "pointManager",
+            inputData: {},
+            feeType: "read",
+          });
+        } catch (e) {
+          console.error("Failed to fetch Loyalty sub contracts", e);
+        }
+      }
+
+      setSubContracts({
+        pcManager,
+        accountManager,
+        posManager,
+        pointManager,
+      });
     } catch (err) {
       console.error("Failed to load branch details", err);
     }
@@ -138,6 +234,8 @@ function BranchDetail() {
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
+
+  console.log("moduleAddresses", moduleAddresses);
 
   if (loading) {
     return (
@@ -448,6 +546,46 @@ function BranchDetail() {
                           )}
                         </div>
                       </div>
+
+                      {/* MEOS Sub-contracts */}
+                      {subContracts && moduleAddresses.meos !== "0x0000000000000000000000000000000000000000" && (
+                        <div className="mt-3 pl-4 border-l-2 border-teal-500/30 space-y-2">
+                          <div className="bg-zinc-950/50 rounded-lg p-3 border border-zinc-900/60">
+                            <div className="flex justify-between items-center text-xs mb-1">
+                              <span className="font-semibold text-zinc-400">PC Manager (Sub-contract)</span>
+                              <button
+                                onClick={() => copyToClipboard(subContracts.pcManager, "pcManager")}
+                                className="hover:text-white cursor-pointer"
+                              >
+                                {copiedKey === "pcManager" ? (
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-zinc-500" />
+                                )}
+                              </button>
+                            </div>
+                            <div className="font-mono text-xs text-zinc-300 break-all">{subContracts.pcManager}</div>
+                          </div>
+
+                          <div className="bg-zinc-950/50 rounded-lg p-3 border border-zinc-900/60">
+                            <div className="flex justify-between items-center text-xs mb-1">
+                              <span className="font-semibold text-zinc-400">Account Manager (Sub-contract)</span>
+                              <button
+                                onClick={() => copyToClipboard(subContracts.accountManager, "accountManager")}
+                                className="hover:text-white cursor-pointer"
+                              >
+                                {copiedKey === "accountManager" ? (
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-zinc-500" />
+                                )}
+                              </button>
+                            </div>
+                            <div className="font-mono text-xs text-zinc-300 break-all">{subContracts.accountManager}</div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="pt-2 border-t border-zinc-850/60 flex justify-between items-center text-xs text-zinc-400">
                         <span>
                           Factory:{" "}
@@ -500,6 +638,29 @@ function BranchDetail() {
                           )}
                         </div>
                       </div>
+
+                      {/* IQR Sub-contracts */}
+                      {subContracts && moduleAddresses.iqr !== "0x0000000000000000000000000000000000000000" && (
+                        <div className="mt-3 pl-4 border-l-2 border-cyan-500/30 space-y-2">
+                          <div className="bg-zinc-950/50 rounded-lg p-3 border border-zinc-900/60">
+                            <div className="flex justify-between items-center text-xs mb-1">
+                              <span className="font-semibold text-zinc-400">POS Manager (Sub-contract)</span>
+                              <button
+                                onClick={() => copyToClipboard(subContracts.posManager, "posManager")}
+                                className="hover:text-white cursor-pointer"
+                              >
+                                {copiedKey === "posManager" ? (
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-zinc-500" />
+                                )}
+                              </button>
+                            </div>
+                            <div className="font-mono text-xs text-zinc-300 break-all">{subContracts.posManager}</div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="pt-2 border-t border-zinc-850/60 flex justify-between items-center text-xs text-zinc-400">
                         <span>
                           Factory:{" "}
@@ -555,6 +716,29 @@ function BranchDetail() {
                           )}
                         </div>
                       </div>
+
+                      {/* Loyalty Sub-contracts */}
+                      {subContracts && moduleAddresses.loyalty !== "0x0000000000000000000000000000000000000000" && (
+                        <div className="mt-3 pl-4 border-l-2 border-purple-500/30 space-y-2">
+                          <div className="bg-zinc-950/50 rounded-lg p-3 border border-zinc-900/60">
+                            <div className="flex justify-between items-center text-xs mb-1">
+                              <span className="font-semibold text-zinc-400">Point Manager (Sub-contract)</span>
+                              <button
+                                onClick={() => copyToClipboard(subContracts.pointManager, "pointManager")}
+                                className="hover:text-white cursor-pointer"
+                              >
+                                {copiedKey === "pointManager" ? (
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-zinc-500" />
+                                )}
+                              </button>
+                            </div>
+                            <div className="font-mono text-xs text-zinc-300 break-all">{subContracts.pointManager}</div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="pt-2 border-t border-zinc-850/60 flex justify-between items-center text-xs text-zinc-400">
                         <span>
                           Factory:{" "}
