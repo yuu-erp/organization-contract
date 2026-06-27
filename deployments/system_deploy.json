@@ -1,0 +1,15 @@
+{
+  "SystemAccessControl": {
+    "impl": "0x9F387873ed2431362455E739d8Ba8eA559628245",
+    "proxy": "0xe17475Df17bdE99ED7A4fa7c3762c96feE69C044"
+  },
+  "OrganizationManager": {
+    "impl": "0x31dF624816bA14E08A89d9B8e8CB04D7f5F3fb56",
+    "proxy": "0x4A8A76018408A00979c6E920e73aA4983BA0f4e8"
+  },
+  "OrganizationMetadataRegistry": {
+    "impl": "0x4c55A1048Ce0cEc146d9971628ace8E570790fFE",
+    "proxy": "0xAB0F1E64D1EE28524371F4b7746802EcF5ebE926"
+  },
+  "OrganizationReader": "0x4fE041fE4F4cc4CcB2667bf7B16F15fD6e9dfC54"
+}
