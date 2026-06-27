@@ -108,10 +108,10 @@ contract StaffMetadataRegistryTest is Test {
         BranchStaffManager staffManager = BranchStaffManager(staffManagerAddr);
 
         vm.startPrank(orgOwner);
-        // Co-owner: role = 1
-        staffManager.setGlobalProfile(branchCoOwner, 1, 0);
         // Manager: role = 2
         staffManager.setGlobalProfile(branchManager, 2, 0);
+        // Co-owner: role = 1
+        staffManager.setGlobalProfile(branchCoOwner, 1, 0);
         // Staff: role = 3
         staffManager.setGlobalProfile(staff1, 3, 0);
         staffManager.setGlobalProfile(staff2, 3, 0);
