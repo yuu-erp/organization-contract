@@ -8,14 +8,28 @@ import {OrganizationTypes} from "../types/OrganizationTypes.sol";
 import {BranchTypes} from "../types/BranchTypes.sol";
 
 interface IOrganizationManagerGetter {
-    function organizations(uint48 orgId) external view returns (address owner, uint48 id, bool active, bool exists);
-
-    function branches(uint48 branchId)
+    function organizations(
+        uint48 orgId
+    )
         external
         view
-        returns (address owner, uint48 organizationId, bool active, bool exists);
+        returns (address owner, uint48 id, bool active, bool exists);
 
-    function getOrganizationBranches(uint48 organizationId) external view returns (uint48[] memory);
+    function branches(
+        uint48 branchId
+    )
+        external
+        view
+        returns (
+            address owner,
+            uint48 organizationId,
+            bool active,
+            bool exists
+        );
+
+    function getOrganizationBranches(
+        uint48 organizationId
+    ) external view returns (uint48[] memory);
 }
 
 /**
@@ -26,10 +40,20 @@ contract OrganizationReader is IOrganizationReader, Ownable {
     IOrganizationManagerGetter public organizationManager;
     IOrganizationMetadataRegistry public metadataRegistry;
 
-    event ContractsUpdated(address indexed organizationManager, address indexed metadataRegistry);
+    event ContractsUpdated(
+        address indexed organizationManager,
+        address indexed metadataRegistry
+    );
 
-    constructor(address _organizationManager, address _metadataRegistry, address _initialOwner) Ownable(_initialOwner) {
-        if (_organizationManager == address(0) || _metadataRegistry == address(0)) {
+    constructor(
+        address _organizationManager,
+        address _metadataRegistry,
+        address _initialOwner
+    ) Ownable(_initialOwner) {
+        if (
+            _organizationManager == address(0) ||
+            _metadataRegistry == address(0)
+        ) {
             revert InvalidAddress();
         }
         organizationManager = IOrganizationManagerGetter(_organizationManager);
@@ -41,8 +65,14 @@ contract OrganizationReader is IOrganizationReader, Ownable {
      * @param _organizationManager Địa chỉ Manager mới.
      * @param _metadataRegistry Địa chỉ Registry mới.
      */
-    function updateContracts(address _organizationManager, address _metadataRegistry) external onlyOwner {
-        if (_organizationManager == address(0) || _metadataRegistry == address(0)) {
+    function updateContracts(
+        address _organizationManager,
+        address _metadataRegistry
+    ) external onlyOwner {
+        if (
+            _organizationManager == address(0) ||
+            _metadataRegistry == address(0)
+        ) {
             revert InvalidAddress();
         }
         organizationManager = IOrganizationManagerGetter(_organizationManager);
@@ -53,13 +83,15 @@ contract OrganizationReader is IOrganizationReader, Ownable {
     /**
      * @dev Lấy đầy đủ thông tin của Organization bao gồm cả core và metadata.
      */
-    function getFullOrganizationInfo(uint48 organizationId)
-        external
-        view
-        override
-        returns (FullOrganizationInfo memory)
-    {
-        (address owner, uint48 id, bool active, bool exists) = organizationManager.organizations(organizationId);
+    function getFullOrganizationInfo(
+        uint48 organizationId
+    ) external view override returns (FullOrganizationInfo memory) {
+        (
+            address owner,
+            uint48 id,
+            bool active,
+            bool exists
+        ) = organizationManager.organizations(organizationId);
         if (!exists) {
             revert OrganizationNotFound();
         }
@@ -77,29 +109,39 @@ contract OrganizationReader is IOrganizationReader, Ownable {
             phoneNumber = meta.phoneNumber;
         } catch {}
 
-        return FullOrganizationInfo({
-            id: id,
-            owner: owner,
-            active: active,
-            exists: exists,
-            name: name,
-            organizationAddress: orgAddress,
-            phoneNumber: phoneNumber
-        });
+        return
+            FullOrganizationInfo({
+                id: id,
+                owner: owner,
+                active: active,
+                exists: exists,
+                name: name,
+                organizationAddress: orgAddress,
+                phoneNumber: phoneNumber
+            });
     }
 
     /**
      * @dev Lấy đầy đủ thông tin của Branch (Hàm External cho Frontend)
      */
-    function getFullBranchInfo(uint48 branchId) external view override returns (FullBranchInfo memory) {
+    function getFullBranchInfo(
+        uint48 branchId
+    ) external view override returns (FullBranchInfo memory) {
         return _getFullBranchInfo(branchId);
     }
 
     /**
      * @dev Logic cốt lõi để lấy Branch (Hàm Internal để dùng nội bộ, tiết kiệm overhead)
      */
-    function _getFullBranchInfo(uint48 branchId) internal view returns (FullBranchInfo memory) {
-        (address owner, uint48 organizationId, bool active, bool exists) = organizationManager.branches(branchId);
+    function _getFullBranchInfo(
+        uint48 branchId
+    ) internal view returns (FullBranchInfo memory) {
+        (
+            address owner,
+            uint48 organizationId,
+            bool active,
+            bool exists
+        ) = organizationManager.branches(branchId);
         if (!exists) revert BranchNotFound();
 
         string memory name = "";
@@ -107,43 +149,82 @@ contract OrganizationReader is IOrganizationReader, Ownable {
         string memory phoneNumber = "";
         string memory code = "";
 
-        try metadataRegistry.getBranchMetadata(branchId) returns (BranchTypes.BranchMetadata memory meta) {
+        try metadataRegistry.getBranchMetadata(branchId) returns (
+            BranchTypes.BranchMetadata memory meta
+        ) {
             name = meta.name;
             orgAddress = meta.organizationAddress;
             phoneNumber = meta.phoneNumber;
             code = meta.code;
         } catch {}
 
-        return FullBranchInfo({
-            id: branchId,
-            owner: owner,
-            organizationId: organizationId,
-            active: active,
-            exists: exists,
-            name: name,
-            organizationAddress: orgAddress,
-            phoneNumber: phoneNumber,
-            code: code
-        });
+        return
+            FullBranchInfo({
+                id: branchId,
+                owner: owner,
+                organizationId: organizationId,
+                active: active,
+                exists: exists,
+                name: name,
+                organizationAddress: orgAddress,
+                phoneNumber: phoneNumber,
+                code: code
+            });
     }
 
     /**
      * @dev Lấy danh sách đầy đủ thông tin tất cả các Branch.
      */
-    function getOrganizationBranchesFull(uint48 organizationId)
-        external
-        view
-        override
-        returns (FullBranchInfo[] memory)
-    {
-        uint48[] memory branchIds = organizationManager.getOrganizationBranches(organizationId);
+    function getOrganizationBranchesFull(
+        uint48 organizationId
+    ) external view override returns (FullBranchInfo[] memory) {
+        uint48[] memory branchIds = organizationManager.getOrganizationBranches(
+            organizationId
+        );
         uint256 length = branchIds.length;
 
         FullBranchInfo[] memory fullBranches = new FullBranchInfo[](length);
 
         for (uint256 i = 0; i < length; i++) {
             // Thay `this.getFullBranchInfo` bằng `_getFullBranchInfo`
-            fullBranches[i] = _getFullBranchInfo(branchIds[i]); 
+            fullBranches[i] = _getFullBranchInfo(branchIds[i]);
+        }
+
+        return fullBranches;
+    }
+
+    /**
+     * @dev Lấy danh sách thông tin các Branch có phân trang.
+     * @param organizationId ID của tổ chức.
+     * @param offset Vị trí bắt đầu.
+     * @param limit Số lượng tối đa muốn lấy.
+     */
+    function getOrganizationBranchesPaginated(
+        uint48 organizationId,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (FullBranchInfo[] memory) {
+        uint48[] memory branchIds = organizationManager.getOrganizationBranches(
+            organizationId
+        );
+        uint256 totalBranches = branchIds.length;
+
+        // Trả về mảng rỗng nếu offset vượt quá số lượng
+        if (offset >= totalBranches) {
+            return new FullBranchInfo[](0);
+        }
+
+        // Tính toán giới hạn thực tế
+        uint256 end = offset + limit;
+        if (end > totalBranches) {
+            end = totalBranches;
+        }
+
+        uint256 resultSize = end - offset;
+        FullBranchInfo[] memory fullBranches = new FullBranchInfo[](resultSize);
+
+        for (uint256 i = 0; i < resultSize; i++) {
+            fullBranches[i] = _getFullBranchInfo(branchIds[offset + i]);
         }
 
         return fullBranches;

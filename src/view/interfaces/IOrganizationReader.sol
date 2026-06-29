@@ -34,15 +34,30 @@ interface IOrganizationReader {
     /**
      * @dev Lấy đầy đủ thông tin của Organization bao gồm cả core và metadata.
      */
-    function getFullOrganizationInfo(uint48 organizationId) external view returns (FullOrganizationInfo memory);
+    function getFullOrganizationInfo(
+        uint48 organizationId
+    ) external view returns (FullOrganizationInfo memory);
 
     /**
      * @dev Lấy đầy đủ thông tin của Branch bao gồm cả core và metadata.
      */
-    function getFullBranchInfo(uint48 branchId) external view returns (FullBranchInfo memory);
+    function getFullBranchInfo(
+        uint48 branchId
+    ) external view returns (FullBranchInfo memory);
 
     /**
      * @dev Lấy danh sách đầy đủ thông tin tất cả các Branch của một Organization.
      */
-    function getOrganizationBranchesFull(uint48 organizationId) external view returns (FullBranchInfo[] memory);
+    function getOrganizationBranchesFull(
+        uint48 organizationId
+    ) external view returns (FullBranchInfo[] memory);
+
+    /**
+     * @dev Lấy danh sách thông tin các Branch có phân trang.
+     */
+    function getOrganizationBranchesPaginated(
+        uint48 organizationId,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (FullBranchInfo[] memory);
 }
