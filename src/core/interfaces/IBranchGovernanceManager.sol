@@ -46,6 +46,7 @@ interface IBranchGovernanceManager {
     error ProposalAlreadyVoted();
     error ProposalCannotBeExecuted();
     error HashMismatch();
+    error VoterAppointedAfterCreation();
 
     // ====== CORE FUNCTIONS ======
 
@@ -54,9 +55,6 @@ interface IBranchGovernanceManager {
      * @param proposalType Loại đề xuất.
      * @param target Địa chỉ đích chịu tác động.
      * @param role Vai trò cần gán.
-     * @param globalPerms Quyền hạn toàn cục cần gán.
-     * @param moduleKey Định danh module cần gán quyền riêng biệt.
-     * @param modulePermBitmask Bitmask quyền hạn của module.
      * @param name Tên nhân sự (dùng để hash).
      * @param phone Số điện thoại (dùng để hash).
      * @param avatar Ảnh đại diện (dùng để hash).
@@ -66,9 +64,6 @@ interface IBranchGovernanceManager {
         GovernanceTypes.ProposalType proposalType,
         address target,
         uint8 role,
-        uint248 globalPerms,
-        bytes32 moduleKey,
-        uint256 modulePermBitmask,
         string calldata name,
         string calldata phone,
         string calldata avatar

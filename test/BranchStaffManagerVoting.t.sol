@@ -12,6 +12,7 @@ import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
 import {BranchGovernanceManager} from "../src/core/BranchGovernanceManager.sol";
 import {IBranchGovernanceManager} from "../src/core/interfaces/IBranchGovernanceManager.sol";
+import {IBranchStaffManager} from "../src/core/interfaces/IBranchStaffManager.sol";
 import {GovernanceTypes} from "../src/types/GovernanceTypes.sol";
 import {StaffMetadataRegistry} from "../src/registry/StaffMetadataRegistry.sol";
 import {IStaffMetadataRegistry} from "../src/registry/interfaces/IStaffMetadataRegistry.sol";
@@ -45,7 +46,12 @@ contract BranchStaffManagerVotingTest is Test {
         // 1. Deploy SystemAccessControl (UUPS Proxy)
         SystemAccessControl sacImpl = new SystemAccessControl();
         sacProxy = SystemAccessControl(
-            address(new ERC1967Proxy(address(sacImpl), abi.encodeCall(SystemAccessControl.initialize, (deployer))))
+            address(
+                new ERC1967Proxy(
+                    address(sacImpl),
+                    abi.encodeCall(SystemAccessControl.initialize, (deployer))
+                )
+            )
         );
         sacProxy.grantRole(RoleHashes.PLATFORM_ADMIN_ROLE, deployer);
 
@@ -53,23 +59,43 @@ contract BranchStaffManagerVotingTest is Test {
         OrganizationManager omImpl = new OrganizationManager();
         omProxy = OrganizationManager(
             address(
-                new ERC1967Proxy(address(omImpl), abi.encodeCall(OrganizationManager.initialize, (address(sacProxy))))
+                new ERC1967Proxy(
+                    address(omImpl),
+                    abi.encodeCall(
+                        OrganizationManager.initialize,
+                        (address(sacProxy))
+                    )
+                )
             )
         );
 
         // 3. Deploy ModuleRegistry (UUPS Proxy)
         ModuleRegistry mrImpl = new ModuleRegistry();
         mrProxy = ModuleRegistry(
-            address(new ERC1967Proxy(address(mrImpl), abi.encodeCall(ModuleRegistry.initialize, (address(sacProxy)))))
+            address(
+                new ERC1967Proxy(
+                    address(mrImpl),
+                    abi.encodeCall(
+                        ModuleRegistry.initialize,
+                        (address(sacProxy))
+                    )
+                )
+            )
         );
 
         // 4. Deploy BranchStaffManager implementation + UpgradeableBeacon
         BranchStaffManager staffManagerImpl = new BranchStaffManager();
-        UpgradeableBeacon staffBeacon = new UpgradeableBeacon(address(staffManagerImpl), deployer);
+        UpgradeableBeacon staffBeacon = new UpgradeableBeacon(
+            address(staffManagerImpl),
+            deployer
+        );
 
         // 5. Deploy BranchGovernanceManager implementation + UpgradeableBeacon
         BranchGovernanceManager governanceImpl = new BranchGovernanceManager();
-        UpgradeableBeacon govBeacon = new UpgradeableBeacon(address(governanceImpl), deployer);
+        UpgradeableBeacon govBeacon = new UpgradeableBeacon(
+            address(governanceImpl),
+            deployer
+        );
 
         // 6. Deploy BranchModuleManager (UUPS Proxy)
         BranchModuleManager bmmImpl = new BranchModuleManager();
@@ -79,7 +105,12 @@ contract BranchStaffManagerVotingTest is Test {
                     address(bmmImpl),
                     abi.encodeCall(
                         BranchModuleManager.initialize,
-                        (address(sacProxy), address(omProxy), address(mrProxy), address(staffBeacon))
+                        (
+                            address(sacProxy),
+                            address(omProxy),
+                            address(mrProxy),
+                            address(staffBeacon)
+                        )
                     )
                 )
             )
@@ -92,7 +123,8 @@ contract BranchStaffManagerVotingTest is Test {
                 new ERC1967Proxy(
                     address(smrImpl),
                     abi.encodeCall(
-                        StaffMetadataRegistry.initialize, (address(sacProxy), address(omProxy), address(bmmProxy))
+                        StaffMetadataRegistry.initialize,
+                        (address(sacProxy), address(omProxy), address(bmmProxy))
                     )
                 )
             )
@@ -104,12 +136,15 @@ contract BranchStaffManagerVotingTest is Test {
         omProxy.setRegistryAndManager(address(mrProxy), address(bmmProxy));
 
         // Configure Governance Beacon and StaffMetadataRegistry in BranchModuleManager
-        bmmProxy.setGovernanceAndRegistry(address(govBeacon), address(smrProxy));
+        bmmProxy.setGovernanceAndRegistry(
+            address(govBeacon),
+            address(smrProxy)
+        );
 
         // Setup Organization and Branch
         bytes32[] memory emptyModules = new bytes32[](0);
         orgId = uint48(omProxy.createOrganization(orgOwner, emptyModules));
-        branchId = omProxy.createBranch(orgId, emptyModules); 
+        branchId = omProxy.createBranch(orgId, emptyModules);
 
         address staffManagerAddr = bmmProxy.getBranchStaffManager(branchId);
         staffManager = BranchStaffManager(staffManagerAddr);
@@ -128,10 +163,16 @@ contract BranchStaffManagerVotingTest is Test {
         assertEq(staffManager.coOwnerCount(), 1);
 
         // 2. Direct metadata update works when target is not co-owner yet
-        smrProxy.setStaffMetadata(branchId, branchManager, "Direct Manager", "0912345", "direct_avatar");
+        smrProxy.setStaffMetadata(
+            branchId,
+            branchManager,
+            "Direct Manager",
+            "0912345",
+            "direct_avatar"
+        );
 
         // Now coOwnerCount is 1. Let's try to add another co-owner directly. It should revert.
-        vm.expectRevert("RequiresProposal");
+        vm.expectRevert(IBranchStaffManager.RequiresProposal.selector);
         staffManager.setGlobalProfile(branchCoOwner2, 1, 0);
 
         vm.stopPrank();
@@ -144,7 +185,7 @@ contract BranchStaffManagerVotingTest is Test {
 
         // 2. Try to add manager directly -> fails
         vm.startPrank(orgOwner);
-        vm.expectRevert("RequiresProposal");
+        vm.expectRevert(IBranchStaffManager.RequiresProposal.selector);
         staffManager.setGlobalProfile(branchManager, 2, 0);
 
         // 3. Create proposal to add manager (using governanceManager)
@@ -152,9 +193,6 @@ contract BranchStaffManagerVotingTest is Test {
             GovernanceTypes.ProposalType.AddOrUpdateProfile,
             branchManager,
             2, // ROLE_MANAGER
-            0,
-            bytes32(0),
-            0,
             "",
             "",
             ""
@@ -162,9 +200,11 @@ contract BranchStaffManagerVotingTest is Test {
 
         // Vote 1: Org Owner
         governanceManager.voteProposal(propId, true);
-        
+
         // Try to execute before majority -> fails
-        vm.expectRevert(IBranchGovernanceManager.ProposalCannotBeExecuted.selector);
+        vm.expectRevert(
+            IBranchGovernanceManager.ProposalCannotBeExecuted.selector
+        );
         governanceManager.executeProposal(propId, "", "", "");
         vm.stopPrank();
 
@@ -188,15 +228,18 @@ contract BranchStaffManagerVotingTest is Test {
         // 2. Try to update co-owner metadata directly -> fails
         vm.startPrank(orgOwner);
         vm.expectRevert(StaffMetadataRegistry.RequiresProposal.selector);
-        smrProxy.setStaffMetadata(branchId, branchCoOwner, "CoOwner Name", "123456", "avatar");
+        smrProxy.setStaffMetadata(
+            branchId,
+            branchCoOwner,
+            "CoOwner Name",
+            "123456",
+            "avatar"
+        );
 
         // 3. Create proposal to update metadata
         uint256 propId = governanceManager.createProposal(
             GovernanceTypes.ProposalType.UpdateMetadata,
             branchCoOwner,
-            0,
-            0,
-            bytes32(0),
             0,
             "CoOwner Voted Name",
             "12345678",
@@ -211,9 +254,17 @@ contract BranchStaffManagerVotingTest is Test {
 
         // Execute proposal with matching payload -> updates metadata in StaffMetadataRegistry
         vm.prank(orgOwner);
-        governanceManager.executeProposal(propId, "CoOwner Voted Name", "12345678", "avatar_voted");
+        governanceManager.executeProposal(
+            propId,
+            "CoOwner Voted Name",
+            "12345678",
+            "avatar_voted"
+        );
 
-        StaffTypes.StaffMetadata memory meta = smrProxy.getStaffMetadata(branchId, branchCoOwner);
+        StaffTypes.StaffMetadata memory meta = smrProxy.getStaffMetadata(
+            branchId,
+            branchCoOwner
+        );
         assertEq(meta.name, "CoOwner Voted Name");
         assertEq(meta.phoneNumber, "12345678");
         assertEq(meta.avatar, "avatar_voted");
@@ -228,9 +279,6 @@ contract BranchStaffManagerVotingTest is Test {
             GovernanceTypes.ProposalType.AddOrUpdateProfile,
             branchManager,
             2,
-            0,
-            bytes32(0),
-            0,
             "",
             "",
             ""
@@ -256,9 +304,6 @@ contract BranchStaffManagerVotingTest is Test {
             GovernanceTypes.ProposalType.AddOrUpdateProfile,
             branchManager,
             2,
-            0,
-            bytes32(0),
-            0,
             "",
             "",
             ""

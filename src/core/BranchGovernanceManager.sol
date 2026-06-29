@@ -7,16 +7,36 @@ import {BranchGovernanceManagerStorage} from "./storage/BranchGovernanceManagerS
 import {GovernanceTypes} from "../types/GovernanceTypes.sol";
 
 interface IOrganizationManagerWithOwner {
-    function organizations(uint48 id) external view returns (address owner, uint48 orgId, bool active, bool exists);
+    function organizations(
+        uint48 id
+    )
+        external
+        view
+        returns (address owner, uint48 orgId, bool active, bool exists);
 }
 
 interface IBranchStaffManagerGov {
     function coOwnerCount() external view returns (uint256);
+
     function isCoOwner(address account) external view returns (bool);
-    
+
+    function coOwnerAppointedTime(
+        address account
+    ) external view returns (uint256);
+
     // Các hàm thực thi (chỉ Gov mới được gọi)
-    function setGlobalProfile(address staff, uint8 role, uint248 globalPerms) external;
-    function setModulePermissions(address staff, bytes32 moduleKey, uint256 permissions) external;
+    function setGlobalProfile(
+        address staff,
+        uint8 role,
+        uint248 globalPerms
+    ) external;
+
+    function setModulePermissions(
+        address staff,
+        bytes32 moduleKey,
+        uint256 permissions
+    ) external;
+
     function revokeRole(address staff) external;
 }
 
@@ -34,8 +54,11 @@ interface IStaffMetadataRegistryGov {
  * @title BranchGovernanceManager
  * @dev Hợp đồng chuyên biệt xử lý đề xuất, bỏ phiếu và thực thi các hành động đặc quyền tại chi nhánh.
  */
-contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorage, IBranchGovernanceManager {
-    
+contract BranchGovernanceManager is
+    Initializable,
+    BranchGovernanceManagerStorage,
+    IBranchGovernanceManager
+{
     // ====== HẰNG SỐ ======
     uint256 public constant VOTING_DURATION = 7 days; // Guardrail 1: Hardcoded Duration
 
@@ -51,7 +74,11 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
         address _branchStaffManager,
         address _staffMetadataRegistry
     ) external initializer {
-        if (_organizationManager == address(0) || _branchStaffManager == address(0) || _staffMetadataRegistry == address(0)) {
+        if (
+            _organizationManager == address(0) ||
+            _branchStaffManager == address(0) ||
+            _staffMetadataRegistry == address(0)
+        ) {
             revert InvalidInput();
         }
         branchId = _branchId;
@@ -70,9 +97,6 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
         GovernanceTypes.ProposalType proposalType,
         address target,
         uint8 role,
-        uint248 globalPerms,
-        bytes32 moduleKey,
-        uint256 modulePermBitmask,
         string calldata name,
         string calldata phone,
         string calldata avatar
@@ -90,10 +114,8 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
             proposalType: proposalType,
             target: target,
             role: role,
-            globalPerms: globalPerms,
-            moduleKey: moduleKey,
-            modulePermBitmask: modulePermBitmask,
             metadataHash: metadataHash,
+            creationTime: uint48(block.timestamp),
             endTime: uint48(block.timestamp + VOTING_DURATION),
             yesVotes: 0,
             noVotes: 0,
@@ -102,7 +124,14 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
             creator: msg.sender
         });
 
-        emit ProposalCreated(proposalId, proposalType, target, name, phone, avatar);
+        emit ProposalCreated(
+            proposalId,
+            proposalType,
+            target,
+            name,
+            phone,
+            avatar
+        );
         return proposalId;
     }
 
@@ -111,10 +140,23 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
      */
     function voteProposal(uint256 proposalId, bool support) external override {
         GovernanceTypes.Proposal storage proposal = proposals[proposalId];
-        if (proposal.state != GovernanceTypes.ProposalState.Active) revert ProposalNotActive();
+        if (proposal.state != GovernanceTypes.ProposalState.Active)
+            revert ProposalNotActive();
         if (block.timestamp > proposal.endTime) revert ProposalExpired();
         if (!_isEligibleVoter(msg.sender)) revert Unauthorized();
-        if (proposalVoted[proposalId][msg.sender]) revert ProposalAlreadyVoted();
+
+        // Guardrail: Checkpoint Problem
+        // Người dùng (Co-owner) chỉ được phép vote nếu họ được bổ nhiệm TRƯỚC (hoặc CÙNG) thời điểm tạo proposal.
+        // Owner thì mặc định hợp lệ vì không có appointedTime (hoặc bằng 0).
+        if (msg.sender != _getOrgOwner()) {
+            uint256 appointedTime = IBranchStaffManagerGov(branchStaffManager)
+                .coOwnerAppointedTime(msg.sender);
+            if (appointedTime > proposal.creationTime)
+                revert VoterAppointedAfterCreation();
+        }
+
+        if (proposalVoted[proposalId][msg.sender])
+            revert ProposalAlreadyVoted();
 
         proposalVoted[proposalId][msg.sender] = true;
 
@@ -137,7 +179,8 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
         string calldata avatar
     ) external override {
         GovernanceTypes.Proposal storage proposal = proposals[proposalId];
-        if (proposal.state != GovernanceTypes.ProposalState.Active) revert ProposalNotActive();
+        if (proposal.state != GovernanceTypes.ProposalState.Active)
+            revert ProposalNotActive();
 
         // Kiểm tra điều kiện đa số biểu quyết dựa trên số cử tri tại thời điểm tạo đề xuất
         if (proposal.yesVotes <= (proposal.totalVotersAtCreation / 2)) {
@@ -145,28 +188,33 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
         }
 
         // Xác thực tính khớp của payload truyền vào với hash đã lưu
-        if (keccak256(abi.encode(name, phone, avatar)) != proposal.metadataHash) {
+        if (
+            keccak256(abi.encode(name, phone, avatar)) != proposal.metadataHash
+        ) {
             revert HashMismatch();
         }
 
         proposal.state = GovernanceTypes.ProposalState.Executed;
 
         // Thực thi gọi sang các contract tương ứng
-        if (proposal.proposalType == GovernanceTypes.ProposalType.AddOrUpdateProfile) {
+        if (
+            proposal.proposalType ==
+            GovernanceTypes.ProposalType.AddOrUpdateProfile
+        ) {
             IBranchStaffManagerGov(branchStaffManager).setGlobalProfile(
                 proposal.target,
                 proposal.role,
-                proposal.globalPerms
+                0 // Manager và Co-owner có toàn quyền nên globalPerms luôn là 0
             );
-        } else if (proposal.proposalType == GovernanceTypes.ProposalType.RevokeRole) {
-            IBranchStaffManagerGov(branchStaffManager).revokeRole(proposal.target);
-        } else if (proposal.proposalType == GovernanceTypes.ProposalType.SetModulePermissions) {
-            IBranchStaffManagerGov(branchStaffManager).setModulePermissions(
-                proposal.target,
-                proposal.moduleKey,
-                proposal.modulePermBitmask
+        } else if (
+            proposal.proposalType == GovernanceTypes.ProposalType.RevokeRole
+        ) {
+            IBranchStaffManagerGov(branchStaffManager).revokeRole(
+                proposal.target
             );
-        } else if (proposal.proposalType == GovernanceTypes.ProposalType.UpdateMetadata) {
+        } else if (
+            proposal.proposalType == GovernanceTypes.ProposalType.UpdateMetadata
+        ) {
             IStaffMetadataRegistryGov(staffMetadataRegistry).setStaffMetadata(
                 branchId,
                 proposal.target,
@@ -184,10 +232,12 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
      */
     function cancelProposal(uint256 proposalId) external override {
         GovernanceTypes.Proposal storage proposal = proposals[proposalId];
-        if (proposal.state != GovernanceTypes.ProposalState.Active) revert ProposalNotActive();
+        if (proposal.state != GovernanceTypes.ProposalState.Active)
+            revert ProposalNotActive();
 
         address owner = _getOrgOwner();
-        if (msg.sender != proposal.creator && msg.sender != owner) revert Unauthorized();
+        if (msg.sender != proposal.creator && msg.sender != owner)
+            revert Unauthorized();
 
         proposal.state = GovernanceTypes.ProposalState.Canceled;
         emit ProposalCanceled(proposalId);
@@ -196,14 +246,18 @@ contract BranchGovernanceManager is Initializable, BranchGovernanceManagerStorag
     // ====== VIEW & INTERNAL FUNCTIONS ======
 
     function _getOrgOwner() internal view returns (address) {
-        (address owner, , , ) = IOrganizationManagerWithOwner(organizationManager).organizations(orgId);
+        (address owner, , , ) = IOrganizationManagerWithOwner(
+            organizationManager
+        ).organizations(orgId);
         return owner;
     }
 
     function _getTotalVotersCount() internal view returns (uint256) {
         address owner = _getOrgOwner();
-        uint256 count = IBranchStaffManagerGov(branchStaffManager).coOwnerCount();
-        bool ownerIsCoOwner = IBranchStaffManagerGov(branchStaffManager).isCoOwner(owner);
+        uint256 count = IBranchStaffManagerGov(branchStaffManager)
+            .coOwnerCount();
+        bool ownerIsCoOwner = IBranchStaffManagerGov(branchStaffManager)
+            .isCoOwner(owner);
         return ownerIsCoOwner ? count : count + 1;
     }
 

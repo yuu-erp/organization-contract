@@ -9,8 +9,17 @@ import {BranchStaffManagerStorage} from "./storage/BranchStaffManagerStorage.sol
 
 interface IOrganizationManagerWithBMM {
     function branchModuleManager() external view returns (address);
-    function getOrganizationIdByOwner(address owner) external view returns (uint48);
-    function organizations(uint48 id) external view returns (address owner, uint48 orgId, bool active, bool exists);
+
+    function getOrganizationIdByOwner(
+        address owner
+    ) external view returns (uint48);
+
+    function organizations(
+        uint48 id
+    )
+        external
+        view
+        returns (address owner, uint48 orgId, bool active, bool exists);
 }
 
 /**
@@ -19,7 +28,11 @@ interface IOrganizationManagerWithBMM {
  * Áp dụng kiến trúc Phân mảnh Quyền (Namespaced Permissions) bằng Bitmask.
  * Tách biệt hoàn toàn phần Governance biểu quyết ra ngoài.
  */
-contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranchStaffManager {
+contract BranchStaffManager is
+    Initializable,
+    BranchStaffManagerStorage,
+    IBranchStaffManager
+{
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // ====== CUSTOM ERRORS ======
@@ -29,27 +42,33 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
     /**
      * @dev Khởi tạo contract.
      */
-    function initialize(uint48 _branchId, uint48 _orgId, address _organizationManager) external initializer {
+    function initialize(
+        uint48 _branchId,
+        uint48 _orgId,
+        address _organizationManager
+    ) external initializer {
         branchId = _branchId;
         orgId = _orgId;
         organizationManager = _organizationManager;
     }
 
     // ====== THIẾT LẬP ĐỊA CHỈ GOVERNANCE ======
-    
+
     /**
      * @dev Thiết lập địa chỉ BranchGovernanceManager đặc quyền.
      * Chỉ cho phép BranchModuleManager gọi để tránh phụ thuộc vòng.
      */
     function setBranchGovernanceManager(address _govManager) external {
-        address bmm = IOrganizationManagerWithBMM(organizationManager).branchModuleManager();
+        address bmm = IOrganizationManagerWithBMM(organizationManager)
+            .branchModuleManager();
         if (msg.sender != bmm) revert Unauthorized();
         branchGovernanceManager = _govManager;
     }
 
     function setStaffMetadataRegistry(address _registry) external {
         address owner = _getOrgOwner();
-        address bmm = IOrganizationManagerWithBMM(organizationManager).branchModuleManager();
+        address bmm = IOrganizationManagerWithBMM(organizationManager)
+            .branchModuleManager();
         if (msg.sender != owner && msg.sender != bmm) revert Unauthorized();
         staffMetadataRegistry = _registry;
     }
@@ -66,21 +85,27 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
         uint256[] calldata modulePermBitmasks
     ) external override {
         uint8 currentRole = _staffProfiles[staff].role;
-        bool isTargetCoOwnerOrManager = (currentRole == ROLE_CO_OWNER || currentRole == ROLE_MANAGER);
+        bool isTargetCoOwnerOrManager = (currentRole == ROLE_CO_OWNER ||
+            currentRole == ROLE_MANAGER);
 
         // Guardrail 5: Bắt buộc phải thông qua Proposal nếu target là co-owner/manager và coOwnerCount > 0
         if (isTargetCoOwnerOrManager && _coOwners.length() > 0) {
-            require(msg.sender == branchGovernanceManager, "RequiresProposal");
+            if (msg.sender != branchGovernanceManager)
+                revert RequiresProposal();
         } else {
             // Check quyền Manager thông thường
-            if (!_hasRoleOrHigher(msg.sender, ROLE_MANAGER)) revert Unauthorized();
+            if (!_hasRoleOrHigher(msg.sender, ROLE_MANAGER))
+                revert Unauthorized();
         }
 
         if (moduleKeys.length != modulePermBitmasks.length) {
             revert Unauthorized();
         }
 
-        _staffProfiles[staff] = StaffProfile({role: ROLE_STAFF, globalPerms: globalPerms});
+        _staffProfiles[staff] = StaffProfile({
+            role: ROLE_STAFF,
+            globalPerms: globalPerms
+        });
 
         for (uint256 i = 0; i < moduleKeys.length; i++) {
             _modulePerms[staff][moduleKeys[i]] = modulePermBitmasks[i];
@@ -90,18 +115,24 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
     /**
      * @dev Gán quyền Role và Global Permissions cho nhân sự.
      */
-    function setGlobalProfile(address staff, uint8 role, uint248 globalPerms) external override {
+    function setGlobalProfile(
+        address staff,
+        uint8 role,
+        uint248 globalPerms
+    ) external override {
         uint8 currentRole = _staffProfiles[staff].role;
-        bool isTargetCoOwnerOrManager = (
-            currentRole == ROLE_CO_OWNER || currentRole == ROLE_MANAGER ||
-            role == ROLE_CO_OWNER || role == ROLE_MANAGER
-        );
+        bool isTargetCoOwnerOrManager = (currentRole == ROLE_CO_OWNER ||
+            currentRole == ROLE_MANAGER ||
+            role == ROLE_CO_OWNER ||
+            role == ROLE_MANAGER);
 
         // Guardrail 5: Chặn và yêu cầu proposal nếu target là co-owner/manager
         if (isTargetCoOwnerOrManager && _coOwners.length() > 0) {
-            require(msg.sender == branchGovernanceManager, "RequiresProposal");
+            if (msg.sender != branchGovernanceManager)
+                revert RequiresProposal();
         } else {
-            if (!_hasRoleOrHigher(msg.sender, ROLE_CO_OWNER)) revert Unauthorized();
+            if (!_hasRoleOrHigher(msg.sender, ROLE_MANAGER))
+                revert Unauthorized();
         }
 
         if (role == 0 || role > ROLE_STAFF) revert InvalidRole();
@@ -109,21 +140,31 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
         _updateCoOwnerSet(staff, role);
 
         uint248 assignedPerms = (role == ROLE_STAFF) ? globalPerms : 0;
-        _staffProfiles[staff] = StaffProfile({role: role, globalPerms: assignedPerms});
+        _staffProfiles[staff] = StaffProfile({
+            role: role,
+            globalPerms: assignedPerms
+        });
     }
 
     /**
      * @dev Gán quyền riêng biệt cho một Module cụ thể (vd: MEOS).
      */
-    function setModulePermissions(address staff, bytes32 moduleKey, uint256 permissions) external override {
+    function setModulePermissions(
+        address staff,
+        bytes32 moduleKey,
+        uint256 permissions
+    ) external override {
         uint8 currentRole = _staffProfiles[staff].role;
-        bool isTargetCoOwnerOrManager = (currentRole == ROLE_CO_OWNER || currentRole == ROLE_MANAGER);
+        bool isTargetCoOwnerOrManager = (currentRole == ROLE_CO_OWNER ||
+            currentRole == ROLE_MANAGER);
 
         // Guardrail 5: Chặn và yêu cầu proposal nếu target là co-owner/manager
         if (isTargetCoOwnerOrManager && _coOwners.length() > 0) {
-            require(msg.sender == branchGovernanceManager, "RequiresProposal");
+            if (msg.sender != branchGovernanceManager)
+                revert RequiresProposal();
         } else {
-            if (!_hasRoleOrHigher(msg.sender, ROLE_MANAGER)) revert Unauthorized();
+            if (!_hasRoleOrHigher(msg.sender, ROLE_MANAGER))
+                revert Unauthorized();
         }
 
         if (_staffProfiles[staff].role == 0) revert Unauthorized();
@@ -135,13 +176,16 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
      */
     function revokeRole(address staff) external override {
         uint8 currentRole = _staffProfiles[staff].role;
-        bool isTargetCoOwnerOrManager = (currentRole == ROLE_CO_OWNER || currentRole == ROLE_MANAGER);
+        bool isTargetCoOwnerOrManager = (currentRole == ROLE_CO_OWNER ||
+            currentRole == ROLE_MANAGER);
 
         // Guardrail 5: Chặn và yêu cầu proposal nếu target là co-owner/manager
         if (isTargetCoOwnerOrManager && _coOwners.length() > 0) {
-            require(msg.sender == branchGovernanceManager, "RequiresProposal");
+            if (msg.sender != branchGovernanceManager)
+                revert RequiresProposal();
         } else {
-            if (!_hasRoleOrHigher(msg.sender, ROLE_CO_OWNER)) revert Unauthorized();
+            if (!_hasRoleOrHigher(msg.sender, ROLE_MANAGER))
+                revert Unauthorized();
         }
 
         if (_staffProfiles[staff].role == ROLE_CO_OWNER) {
@@ -161,7 +205,9 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
         return _coOwners.contains(account);
     }
 
-    function staffProfiles(address staff) external view override returns (uint8 role, uint248 globalPerms) {
+    function staffProfiles(
+        address staff
+    ) external view override returns (uint8 role, uint248 globalPerms) {
         StaffProfile memory profile = _staffProfiles[staff];
         return (profile.role, profile.globalPerms);
     }
@@ -171,31 +217,38 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
     /**
      * @dev Check quyền DÙNG CHUNG (Thu ngân, Báo cáo).
      */
-    function hasGlobalPermission(address account, uint256 permissionBit) external view override returns (bool) {
+    function hasGlobalPermission(
+        address account,
+        uint256 permissionBit
+    ) external view override returns (bool) {
         if (_isOwnerOrManager(account)) return true;
 
         StaffProfile memory profile = _staffProfiles[account];
-        return (profile.role == ROLE_STAFF) && ((profile.globalPerms & permissionBit) != 0);
+        return
+            (profile.role == ROLE_STAFF) &&
+            ((profile.globalPerms & permissionBit) != 0);
     }
 
     /**
      * @dev Check quyền RIÊNG CỦA MODULE (Ví dụ: Quyền quản lý PC của MEOS).
      */
-    function hasModulePermission(address account, bytes32 moduleKey, uint256 permissionBit)
-        external
-        view
-        override
-        returns (bool)
-    {
+    function hasModulePermission(
+        address account,
+        bytes32 moduleKey,
+        uint256 permissionBit
+    ) external view override returns (bool) {
         if (_isOwnerOrManager(account)) return true;
 
-        return (_staffProfiles[account].role == ROLE_STAFF) && ((_modulePerms[account][moduleKey] & permissionBit) != 0);
+        return
+            (_staffProfiles[account].role == ROLE_STAFF) &&
+            ((_modulePerms[account][moduleKey] & permissionBit) != 0);
     }
 
     // ====== INTERNAL LOGIC ======
 
     function _getOrgOwner() internal view returns (address) {
-        (address owner, , , ) = IOrganizationManagerWithBMM(organizationManager).organizations(orgId);
+        (address owner, , , ) = IOrganizationManagerWithBMM(organizationManager)
+            .organizations(orgId);
         return owner;
     }
 
@@ -203,8 +256,10 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
         uint8 oldRole = _staffProfiles[staff].role;
         if (oldRole == ROLE_CO_OWNER && newRole != ROLE_CO_OWNER) {
             _coOwners.remove(staff);
+            coOwnerAppointedTime[staff] = 0;
         } else if (oldRole != ROLE_CO_OWNER && newRole == ROLE_CO_OWNER) {
             _coOwners.add(staff);
+            coOwnerAppointedTime[staff] = block.timestamp;
         }
     }
 
@@ -218,8 +273,12 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
     /**
      * @dev Logic cốt lõi để check Role phân cấp.
      */
-    function _hasRoleOrHigher(address account, uint8 minimumRole) internal view returns (bool) {
-        uint48 senderOrg = IOrganizationManagerWithBMM(organizationManager).getOrganizationIdByOwner(account);
+    function _hasRoleOrHigher(
+        address account,
+        uint8 minimumRole
+    ) internal view returns (bool) {
+        uint48 senderOrg = IOrganizationManagerWithBMM(organizationManager)
+            .getOrganizationIdByOwner(account);
         if (senderOrg == orgId) return true;
 
         uint8 role = _staffProfiles[account].role;
@@ -228,7 +287,10 @@ contract BranchStaffManager is Initializable, BranchStaffManagerStorage, IBranch
         return false;
     }
 
-    function modulePerms(address staff, bytes32 moduleKey) external view override returns (uint256) {
+    function modulePerms(
+        address staff,
+        bytes32 moduleKey
+    ) external view override returns (uint256) {
         return _modulePerms[staff][moduleKey];
     }
 }

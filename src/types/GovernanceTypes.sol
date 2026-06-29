@@ -12,7 +12,6 @@ library GovernanceTypes {
     enum ProposalType {
         AddOrUpdateProfile,
         RevokeRole,
-        SetModulePermissions,
         UpdateMetadata
     }
 
@@ -34,10 +33,8 @@ library GovernanceTypes {
         ProposalType proposalType;           // Loại đề xuất
         address target;                     // Địa chỉ đích chịu tác động (nhân sự)
         uint8 role;                         // Vai trò cần cấp (nếu cập nhật profile)
-        uint248 globalPerms;                // Quyền toàn cục (packed cùng với role để gom slot)
-        bytes32 moduleKey;                  // Định danh module cụ thể (nếu cập nhật module perms)
-        uint256 modulePermBitmask;          // Bitmask quyền của module
         bytes32 metadataHash;               // Keccak256 hash của (name, phone, avatar) - Payload Hash Pattern
+        uint48 creationTime;                // Thời điểm tạo đề xuất (để check checkpoint)
         uint48 endTime;                     // Thời điểm kết thúc biểu quyết (packed)
         uint32 yesVotes;                    // Số lượng phiếu thuận (packed)
         uint32 noVotes;                     // Số lượng phiếu chống (packed)

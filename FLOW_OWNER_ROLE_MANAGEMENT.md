@@ -1,146 +1,127 @@
-# Luồng Owner Quản Lý Phân Quyền & Bổ Nhiệm Chi Nhánh
+# Luồng Owner Tạo Manager và Co-owner Cho Các Chi Nhánh
 
-Tài liệu này mô tả chi tiết cách **Owner (Chủ tổ chức)** quản lý phân quyền và bổ nhiệm các vai trò **Co-owner**, **Manager**, **Staff** cho từng chi nhánh dựa trên kiến trúc Smart Contract hiện tại trong thư mục [src/core](file:///Users/yuu/Documents/CONTRACTS/organization-contract/src/core).
+Tài liệu này mô tả chi tiết toàn bộ luồng nghiệp vụ khi **Owner (Chủ tổ chức)** muốn bổ nhiệm hoặc quản lý các vai trò cấp cao (như **Co-owner** và **Manager**) cho một hoặc nhiều chi nhánh. Kiến trúc hiện tại sử dụng mô hình quản trị tách bạch giữa `BranchStaffManager` (Quản lý hồ sơ) và `BranchGovernanceManager` (Quản trị & Biểu quyết).
 
 ---
 
-## 1. Cơ Chế Xác Thực Quyền Tối Cao Của Owner
+## 1. Nguyên Tắc Cốt Lõi
 
-Trong hệ thống, **Owner** của tổ chức không được lưu trữ trong danh sách nhân sự (`staffProfiles`) của từng chi nhánh. Thay vào đó, Owner sở hữu **quyền kiểm soát tối cao (Absolute Bypass)** đối với mọi chi nhánh thuộc tổ chức của họ.
+1. **Owner là Quyền lực Tối cao Toàn cục (Global Absolute Bypass):** Owner của một tổ chức (`OrganizationManager`) mặc định có quyền cao nhất trên mọi chi nhánh thuộc tổ chức đó mà không cần có hồ sơ nhân sự (StaffProfile) lưu trực tiếp tại chi nhánh.
+2. **Khởi tạo trực tiếp (Zero Co-owner Bypass):** Nếu chi nhánh _chưa có bất kỳ Co-owner nào_, Owner có quyền bổ nhiệm trực tiếp Co-owner hoặc Manager ngay lập tức mà không cần bỏ phiếu.
+3. **Bắt buộc Biểu quyết (Decentralized Branch Gov):** Nếu chi nhánh _đã có ít nhất 1 Co-owner_, thì mọi thao tác tạo mới, sửa đổi, hoặc bãi nhiệm Co-owner/Manager **BẮT BUỘC** phải thông qua quy trình biểu quyết bằng `BranchGovernanceManager` (Guardrail 5).
+4. **Checkpoint Chống Thao Túng:** Các Co-owner chỉ được quyền vote cho những Proposal được tạo ra _sau hoặc cùng thời điểm_ họ được bổ nhiệm. Owner không bị giới hạn bởi luật này.
 
-Cơ chế này được thực hiện trong hàm `_hasRoleOrHigher` của [BranchStaffManager.sol](file:///Users/yuu/Documents/CONTRACTS/organization-contract/src/core/BranchStaffManager.sol#L186-L200):
+---
 
-```solidity
-function _hasRoleOrHigher(
-    address account,
-    uint8 minimumRole
-) internal view returns (bool) {
-    // 1. Owner của Tổ chức (Bypass tuyệt đối mọi quyền)
-    uint48 senderOrg = IOrganizationManager(organizationManager)
-        .getOrganizationIdByOwner(account);
-    if (senderOrg == orgId) return true;
+## 2. Luồng Thực Hiện Cho 1 Chi Nhánh Cụ Thể
 
-    // 2. Quyền phân cấp tại nhánh
-    uint8 role = staffProfiles[account].role;
-    if (role != 0 && role <= minimumRole) return true;
+Để bổ nhiệm Co-owner hoặc Manager cho Chi nhánh `branchId`, quy trình như sau:
 
-    return false;
-}
+### Bước 1: Lấy địa chỉ Smart Contract của Chi Nhánh
+
+Frontend cần gọi tới `BranchModuleManager` để lấy ra 2 proxy chính của chi nhánh:
+
+```typescript
+const branchStaffManagerAddress =
+  await branchModuleManager.getBranchStaffManager(branchId);
+const branchGovManagerAddress =
+  await branchModuleManager.branchGovernanceManagers(branchId);
 ```
 
-### Cách thức hoạt động:
+### Bước 2: Kiểm tra số lượng Co-owner hiện tại
 
-- Khi ví của Owner gọi bất kỳ hàm nào yêu cầu quyền quản trị tại chi nhánh (thông qua modifier `requiresRole`), hợp đồng sẽ gọi chéo sang `OrganizationManager` để kiểm tra xem ví đó có phải là Owner của tổ chức sở hữu chi nhánh này (`orgId`) hay không.
-- Nếu đúng, hệ thống trả về `true` ngay lập tức, bỏ qua mọi kiểm tra vai trò lưu ở chi nhánh.
+Truy vấn xem chi nhánh đã có Co-owner nào chưa bằng cách gọi `BranchStaffManager`:
 
----
-
-## 2. Hệ Thống Vai Trò (Roles) & Phân Cấp Quyền Hạn
-
-Tại mỗi chi nhánh, quyền lực được phân cấp theo thứ tự tăng dần về mặt số học (giá trị role càng nhỏ thì quyền lực càng cao):
-
-| Vai trò                              | Giá Trị Hằng Số (`uint8`) | Người Có Quyền Bổ Nhiệm              | Phạm Vi Quyền Hạn                                                                              |
-| :----------------------------------- | :-----------------------: | :----------------------------------- | :--------------------------------------------------------------------------------------------- |
-| **Organization Owner**               |   _(Không giới hạn số)_   | **Platform Admin** (khi tạo Org)     | Toàn quyền kiểm soát tất cả các chi nhánh thuộc tổ chức.                                       |
-| **Co-owner** (Đồng sở hữu chi nhánh) |            `1`            | **Owner**, **Co-owner**              | Quản lý toàn bộ cấu hình nhân sự, bổ nhiệm Manager/Staff và cấu hình tất cả các module.        |
-| **Manager** (Quản lý chi nhánh)      |            `2`            | **Owner**, **Co-owner**              | Thêm mới nhân viên (`Staff`), cấp và điều chỉnh quyền hạn chi tiết trên từng Module nghiệp vụ. |
-| **Staff** (Nhân viên)                |            `3`            | **Owner**, **Co-owner**, **Manager** | Thực thi các nghiệp vụ cụ thể dựa trên Bitmask quyền hạn được cấp.                             |
-
----
-
-## 3. Luồng Quản Lý & Bổ Nhiệm Nhân Sự (Quy trình chi tiết)
-
-### 3.1 Sơ đồ luồng phân quyền (Mermaid Flowchart)
-
-```mermaid
-graph TD
-    %% Định nghĩa các Actor
-    Owner["Owner (Chủ tổ chức)"]
-    CoOwner["Co-owner (Đồng sở hữu nhánh)"]
-    Manager["Manager (Quản lý nhánh)"]
-    Staff["Staff (Nhân viên)"]
-
-    %% Luồng bổ nhiệm vai trò chính (Global Profile)
-    Owner -- "setGlobalProfile()" --> CoOwner
-    Owner -- "setGlobalProfile()" --> Manager
-    Owner -- "setGlobalProfile()" --> Staff
-    CoOwner -- "setGlobalProfile()" --> CoOwner
-    CoOwner -- "setGlobalProfile()" --> Manager
-    CoOwner -- "setGlobalProfile()" --> Staff
-
-    %% Luồng cấp quyền chi tiết
-    Owner -- "addStaffWithPermissions() / setModulePermissions()" --> Staff
-    CoOwner -- "addStaffWithPermissions() / setModulePermissions()" --> Staff
-    Manager -- "addStaffWithPermissions() / setModulePermissions()" --> Staff
-
-    %% Revoke
-    Owner -- "revokeRole()" --> RevokeStaff["Xóa hồ sơ nhân sự"]
-    CoOwner -- "revokeRole()" --> RevokeStaff
+```typescript
+const coOwnerCount = await branchStaffManager.coOwnerCount();
 ```
 
 ---
 
-### 3.2 Các Bước Thực Hiện Trên Smart Contract
+### TÌNH HUỐNG A: `coOwnerCount == 0` (Bổ nhiệm Trực Tiếp)
 
-#### Bước 1: Xác định địa chỉ hợp đồng quản lý nhân sự của chi nhánh
+Trong giai đoạn đầu mới tạo chi nhánh (chưa có Co-owner), Owner có thể bỏ qua toàn bộ rào cản Governance và gọi trực tiếp vào hợp đồng nhân sự.
 
-Để thao tác phân quyền cho Chi nhánh A, Frontend cần truy vấn địa chỉ của hợp đồng `BranchStaffManager` tương ứng thông qua `BranchModuleManager`:
+**Thực thi:** Owner gọi hàm `setGlobalProfile` trên `BranchStaffManager`.
 
 ```solidity
-address staffManager = BranchModuleManager.getBranchStaffManager(branchId);
+// Trong Smart Contract BranchStaffManager
+function setGlobalProfile(address staff, uint8 role, uint248 globalPerms) external;
 ```
 
-#### Bước 2: Bổ nhiệm vai trò Co-owner hoặc Manager (Chỉ Owner & Co-owner thực hiện)
+- Bổ nhiệm **Co-owner**: Truyền `role = 1`.
+- Bổ nhiệm **Manager**: Truyền `role = 2`.
+- Giao dịch thực thi và thay đổi cấu hình nhân sự ngay lập tức. Hệ thống đồng thời lưu lại `coOwnerAppointedTime[staff] = block.timestamp` nếu bổ nhiệm Co-owner.
 
-Owner gọi hàm `setGlobalProfile` trên `BranchStaffManager` để bổ nhiệm:
+---
+
+### TÌNH HUỐNG B: `coOwnerCount > 0` (Bổ nhiệm qua Biểu Quyết)
+
+Lúc này, Guardrail 5 của `BranchStaffManager` đã được kích hoạt. Không ai (kể cả Owner) có thể gọi trực tiếp `setGlobalProfile` cho các vai trò cấp cao. Mọi yêu cầu phải gửi qua `BranchGovernanceManager`.
+
+#### 3.1. Tạo Đề Xuất (Proposal)
+
+Owner gọi hàm `createProposal` trên `BranchGovernanceManager`:
 
 ```solidity
-function setGlobalProfile(
-    address staff,
-    uint8 role,
-    uint248 globalPerms
+function createProposal(
+    GovernanceTypes.ProposalType proposalType, // Truyền AddOrUpdateProfile (0)
+    address target,                            // Địa chỉ ví nhân sự mới
+    uint8 role,                                // 1 (Co-owner) hoặc 2 (Manager)
+    uint248 globalPerms,                       // Bitmask (thường là 0 cho cấp cao)
+    bytes32 moduleKey,                         // Tham số thừa (để rỗng/0x0)
+    uint256 modulePermBitmask,                 // Tham số thừa (để rỗng/0)
+    bytes32 metadataHash                       // Hash thông tin (Tên, SDT, Avatar) để verify
+) external returns (uint256 proposalId);
+```
+
+- Khi tạo, Proposal sẽ snapshot `totalVotersAtCreation` (Bao gồm Owner + số Co-owner hiện tại) và lưu `creationTime`.
+
+#### 3.2. Bỏ Phiếu (Voting)
+
+Owner và các Co-owner hiện tại gọi hàm `voteProposal` để bỏ phiếu (Yes/No).
+
+```solidity
+function voteProposal(uint256 proposalId, bool support) external;
+```
+
+- **Checkpoint Rule:** Nếu một Co-owner nào đó được bổ nhiệm ở timestamp lớn hơn `proposal.creationTime`, giao dịch vote của họ sẽ bị Revert. Tuy nhiên, Owner luôn được vote bình thường.
+
+#### 3.3. Thực Thi (Execution)
+
+Khi thời gian biểu quyết chưa hết nhưng đã gom đủ quá nửa số phiếu thuận (`yesVotes > totalVotersAtCreation / 2`), bất kỳ ai cũng có thể gọi `executeProposal`.
+
+```solidity
+function executeProposal(
+    uint256 proposalId,
+    string calldata name,
+    string calldata phone,
+    string calldata avatar
 ) external;
 ```
 
-- **Bổ nhiệm Co-owner:** Truyền `role = 1 (ROLE_CO_OWNER)`. Tham số `globalPerms` truyền `0` vì Co-owner có quyền bypass các check quyền Global.
-- **Bổ nhiệm Manager:** Truyền `role = 2 (ROLE_MANAGER)`. Tham số `globalPerms` truyền `0`.
+- Proposal khi được thực thi sẽ mượn quyền của Governance (Governance Proxy) gọi sang `BranchStaffManager.setGlobalProfile(...)` để hoàn tất việc cấp quyền.
 
-#### Bước 3: Thêm nhân viên (Staff) và cấp quyền nhanh (Owner, Co-owner, Manager thực hiện)
+---
 
-Để tối ưu phí gas và tăng trải nghiệm sử dụng, hệ thống cung cấp hàm tích hợp cho phép thêm nhân viên mới và cấp toàn bộ quyền nghiệp vụ chỉ trong 1 giao dịch:
+## 3. Đặc Quyền Của Owner (Chống Nổi Loạn / Tối Cao)
 
-```solidity
-function addStaffWithPermissions(
-    address staff,
-    uint248 globalPerms,
-    bytes32[] calldata moduleKeys,
-    uint256[] calldata modulePermBitmasks
-) external;
-```
+Ngay cả trong Tình huống B (phải thông qua biểu quyết), Owner vẫn luôn nắm đằng chuôi để kiểm soát các chi nhánh:
 
-- **`globalPerms`**: Bitmask quyền dùng chung của chi nhánh (ví dụ: `GLOBAL_PERM_CASHIER` để thu ngân, `GLOBAL_PERM_REPORTS` để xem báo cáo tổng).
-- **`moduleKeys`**: Danh sách mã định danh của các Module (Ví dụ: `keccak256("MODULE_MEOS")`).
-- **`modulePermBitmasks`**: Bitmask tương ứng cho từng Module nghiệp vụ (ví dụ: quyền quản lý máy trạm, cấu hình VIP,...).
+1. **Vote Mặc Định:** Owner luôn chiếm 1 phiếu bầu hợp lệ trong `totalVotersAtCreation`.
+2. **Quyền Hủy Bỏ (Cancel):** Owner có quyền gọi `BranchGovernanceManager.cancelProposal(proposalId)` để Hủy (Canceled) bất kỳ Proposal nào đang ở trạng thái Active, ngăn chặn các Co-owner tự ý thông qua một luật lệ hay nhân sự không được Owner chấp thuận.
 
-#### Bước 4: Điều chỉnh quyền hạn Module nghiệp vụ của Staff (Owner, Co-owner, Manager thực hiện)
+---
 
-Khi cần điều chỉnh quyền hạn cụ thể của một nhân viên đối với một phân hệ (ví dụ: tăng/giảm quyền trong Module MEOS):
+## 4. Xử Lý Cho Nhiều Chi Nhánh (Multiple Branches)
 
-```solidity
-function setModulePermissions(
-    address staff,
-    bytes32 moduleKey,
-    uint256 permissions
-) external;
-```
+Nếu Owner muốn áp dụng một nhân sự làm Manager hoặc Co-owner cho **nhiều chi nhánh cùng một lúc**, phía Frontend sẽ cần xử lý vòng lặp qua từng chi nhánh.
 
-#### Bước 5: Bãi nhiệm / Xóa nhân sự khỏi chi nhánh (Chỉ Owner & Co-owner thực hiện)
+Bởi vì mỗi chi nhánh là một hợp đồng Proxy phân tán biệt lập:
 
-Khi nhân sự nghỉ việc hoặc luân chuyển công tác, cần thu hồi hoàn toàn quyền truy cập:
-
-```solidity
-function revokeRole(address staff) external;
-```
-
-- Hàm này sẽ xóa bản ghi của `staff` trong mapping `staffProfiles` (`delete staffProfiles[staff]`).
-- Mặc dù dữ liệu phân quyền module (`modulePerms`) vẫn lưu trên blockchain để tiết kiệm gas cho giao dịch xóa, nhưng do `role` của nhân viên đó đã trở về `0`, mọi hàm kiểm tra quyền hạn (`hasGlobalPermission`, `hasModulePermission`) sẽ tự động từ chối truy cập ngay lập tức.
+1. Frontend sẽ lặp mảng `[branchId_1, branchId_2, ..., branchId_n]`.
+2. Truy xuất Proxy Address của `BranchStaffManager` và `BranchGovernanceManager` tương ứng với mỗi `branchId`.
+3. Kiểm tra số lượng Co-owner trên từng nhánh:
+   - Các nhánh `coOwnerCount == 0`: gom vào 1 mảng dữ liệu (Calldata) để gọi hàm `setGlobalProfile` trực tiếp trên các `BranchStaffManager`.
+   - Các nhánh `coOwnerCount > 0`: gom vào 1 mảng Calldata khác để gọi `createProposal` trên các `BranchGovernanceManager`.
+4. Nếu Frontend có cơ chế hỗ trợ multicall ở cấp độ Tổ chức hoặc thông qua ví User, việc thực thi cho nhiều chi nhánh có thể được gom vào chung một Transaction lớn.

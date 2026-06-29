@@ -53,9 +53,10 @@ abstract contract BranchStaffManagerStorage {
 
     // ====== CÁC BIẾN MỚI CHO THIẾT KẾ PHÂN TÁCH ======
     address public branchGovernanceManager;
+    mapping(address => uint256) public coOwnerAppointedTime;
 
     /**
      * @dev Khoảng trống dự phòng để cho phép thêm các biến storage trong tương lai mà không bị xung đột bộ nhớ.
      */
-    uint256[46] private __gap; // Giảm xuống 46 slot vì đã thêm 1 slot cho branchGovernanceManager
+    uint256[45] private __gap; // Giảm xuống 45 slot vì đã thêm branchGovernanceManager và coOwnerAppointedTime
 }

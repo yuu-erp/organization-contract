@@ -12,6 +12,7 @@ import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
 import {BranchGovernanceManager} from "../src/core/BranchGovernanceManager.sol";
 import {IBranchGovernanceManager} from "../src/core/interfaces/IBranchGovernanceManager.sol";
+import {IBranchStaffManager} from "../src/core/interfaces/IBranchStaffManager.sol";
 import {GovernanceTypes} from "../src/types/GovernanceTypes.sol";
 import {StaffMetadataRegistry} from "../src/registry/StaffMetadataRegistry.sol";
 import {IStaffMetadataRegistry} from "../src/registry/interfaces/IStaffMetadataRegistry.sol";
@@ -131,7 +132,7 @@ contract BranchGovernanceDecoupledTest is Test {
         smrProxy.setStaffMetadata(branchId, branchManager, "Direct Manager", "0912345", "direct_avatar");
 
         // Now coOwnerCount is 1. Let's try to add another co-owner directly. It should revert.
-        vm.expectRevert("RequiresProposal");
+        vm.expectRevert(IBranchStaffManager.RequiresProposal.selector);
         staffManager.setGlobalProfile(branchCoOwner2, 1, 0);
 
         vm.stopPrank();
@@ -144,7 +145,7 @@ contract BranchGovernanceDecoupledTest is Test {
 
         // 2. Try to add manager directly -> fails
         vm.startPrank(orgOwner);
-        vm.expectRevert("RequiresProposal");
+        vm.expectRevert(IBranchStaffManager.RequiresProposal.selector);
         staffManager.setGlobalProfile(branchManager, 2, 0);
 
         // 3. Create proposal to add manager (using governanceManager)
@@ -152,12 +153,9 @@ contract BranchGovernanceDecoupledTest is Test {
             GovernanceTypes.ProposalType.AddOrUpdateProfile,
             branchManager,
             2, // ROLE_MANAGER
-            0,
-            bytes32(0),
-            0,
-            "",
-            "",
-            ""
+            "Manager",
+            "123456789",
+            "avatar"
         );
 
         // Vote 1: Org Owner
@@ -165,7 +163,7 @@ contract BranchGovernanceDecoupledTest is Test {
         
         // Try to execute before majority -> fails
         vm.expectRevert(IBranchGovernanceManager.ProposalCannotBeExecuted.selector);
-        governanceManager.executeProposal(propId, "", "", "");
+        governanceManager.executeProposal(propId, "Manager", "123456789", "avatar");
         vm.stopPrank();
 
         // Vote 2: Co-Owner
@@ -174,7 +172,7 @@ contract BranchGovernanceDecoupledTest is Test {
 
         // Execute -> succeeds
         vm.prank(orgOwner);
-        governanceManager.executeProposal(propId, "", "", "");
+        governanceManager.executeProposal(propId, "Manager", "123456789", "avatar");
 
         (uint8 role, ) = staffManager.staffProfiles(branchManager);
         assertEq(role, 2); // ROLE_MANAGER
@@ -194,9 +192,6 @@ contract BranchGovernanceDecoupledTest is Test {
         uint256 propId = governanceManager.createProposal(
             GovernanceTypes.ProposalType.UpdateMetadata,
             branchCoOwner,
-            0,
-            0,
-            bytes32(0),
             0,
             "CoOwner Voted Name",
             "12345678",
@@ -227,9 +222,6 @@ contract BranchGovernanceDecoupledTest is Test {
         uint256 propId = governanceManager.createProposal(
             GovernanceTypes.ProposalType.UpdateMetadata,
             branchCoOwner,
-            0,
-            0,
-            bytes32(0),
             0,
             "CoOwner Voted Name",
             "12345678",
