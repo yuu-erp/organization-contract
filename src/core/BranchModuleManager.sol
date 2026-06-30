@@ -11,7 +11,7 @@ import {RoleHashes} from "./constants/RoleHashes.sol";
 
 import {ISystemAccessControl} from "./interfaces/ISystemAccessControl.sol";
 import {IOrganizationManager} from "./interfaces/IOrganizationManager.sol";
-import {IModuleRegistry} from "../registry/interfaces/IModuleRegistry.sol";
+import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
 import {IBranchModuleManager} from "./interfaces/IBranchModuleManager.sol";
 import {IModuleFactory} from "./interfaces/IModuleFactory.sol";
 

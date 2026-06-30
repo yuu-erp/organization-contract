@@ -1,28 +1,28 @@
 {
   "SystemAccessControl": {
-    "impl": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    "proxy": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    "impl": "0x9F387873ed2431362455E739d8Ba8eA559628245",
+    "proxy": "0xe17475Df17bdE99ED7A4fa7c3762c96feE69C044"
   },
   "OrganizationManager": {
-    "impl": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
-    "proxy": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
+    "impl": "0x4c55A1048Ce0cEc146d9971628ace8E570790fFE",
+    "proxy": "0xAB0F1E64D1EE28524371F4b7746802EcF5ebE926"
   },
   "OrganizationMetadataRegistry": {
-    "impl": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-    "proxy": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+    "impl": "0x4fE041fE4F4cc4CcB2667bf7B16F15fD6e9dfC54",
+    "proxy": "0x8873181E3564416E857a99bC2052A7548C42E4f5"
   },
   "ModuleRegistry": {
-    "impl": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
-    "proxy": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+    "impl": "0x98278B5d6E6208d3CB81484C19cE945076Bf6Efc",
+    "proxy": "0x59a7b58E1c58E63E9a68407DAb79dbaE5077F02f"
   },
   "BranchModuleManager": {
-    "impl": "0x9A676e781A523b5d0C0e43731313A708CB607508",
-    "proxy": "0x0B306BF915C4d645ff596e518fAf3F9669b97016"
+    "impl": "0xead2FF1cD30C4980682363c7b68b02A8Fc389af7",
+    "proxy": "0xf6658Aec0b23278b734b06Cde54F48C5E61142E1"
   },
   "StaffMetadataRegistry": {
-    "impl": "0x68B1D87F95878fE05B998F19b66F4baba5De1aed",
-    "proxy": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c"
+    "impl": "0xc95f726537F9485b268E2eded5E712CCB6f2E189",
+    "proxy": "0xbbcEcD3E20eF15d499aD51948D8672b7dE7C12F3"
   },
-  "BranchGovernanceBeacon": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
-  "OrganizationReader": "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf"
+  "BranchGovernanceBeacon": "0xf26dda40D4351Eb30767559aAeD52598f5d1246e",
+  "OrganizationReader": "0xC124bb7bb710b114Eb758e9f53cB7eFe02f98D5F"
 }

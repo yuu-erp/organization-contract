@@ -5,7 +5,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 import {ISystemAccessControl} from "../interfaces/ISystemAccessControl.sol";
 import {IOrganizationManager} from "../interfaces/IOrganizationManager.sol";
-import {IModuleRegistry} from "../../registry/interfaces/IModuleRegistry.sol";
+import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
 
 /**
  * @title BranchModuleManagerStorage

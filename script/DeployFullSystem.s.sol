@@ -8,7 +8,7 @@ import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/Upgradeabl
 import {SystemAccessControl} from "../src/core/SystemAccessControl.sol";
 import {OrganizationManager} from "../src/core/OrganizationManager.sol";
 import {OrganizationMetadataRegistry} from "../src/registry/OrganizationMetadataRegistry.sol";
-import {ModuleRegistry} from "../src/registry/ModuleRegistry.sol";
+import {ModuleRegistry} from "../src/core/ModuleRegistry.sol";
 import {BranchModuleManager} from "../src/core/BranchModuleManager.sol";
 import {BranchStaffManager} from "../src/core/BranchStaffManager.sol";
 import {BranchGovernanceManager} from "../src/core/BranchGovernanceManager.sol";
