@@ -31,9 +31,9 @@ library GovernanceTypes {
     struct Proposal {
         uint256 id;                         // ID định danh duy nhất của đề xuất
         ProposalType proposalType;           // Loại đề xuất
-        address target;                     // Địa chỉ đích chịu tác động (nhân sự)
+        address target;                     // Địa chỉ đích chịu tác động
         uint8 role;                         // Vai trò cần cấp (nếu cập nhật profile)
-        bytes32 metadataHash;               // Keccak256 hash của (name, phone, avatar) - Payload Hash Pattern
+        bytes32 payloadHash;                // Keccak256 hash của callData (hoặc metadata)
         uint48 creationTime;                // Thời điểm tạo đề xuất (để check checkpoint)
         uint48 endTime;                     // Thời điểm kết thúc biểu quyết (packed)
         uint32 yesVotes;                    // Số lượng phiếu thuận (packed)

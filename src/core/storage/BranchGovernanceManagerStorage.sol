@@ -14,7 +14,7 @@ abstract contract BranchGovernanceManagerStorage {
     uint48 public orgId;
     address public organizationManager;
     address public branchStaffManager;
-    address public staffMetadataRegistry;
+    address internal __reserved_metadataRegistry;
 
     // Quản lý đề xuất và phiếu bầu
     mapping(uint256 => GovernanceTypes.Proposal) public proposals;

@@ -24,6 +24,8 @@ interface IBranchStaffManagerGov {
         address account
     ) external view returns (uint256);
 
+    function staffMetadataRegistry() external view returns (address);
+
     // Các hàm thực thi (chỉ Gov mới được gọi)
     function setGlobalProfile(
         address staff,
@@ -38,16 +40,6 @@ interface IBranchStaffManagerGov {
     ) external;
 
     function revokeRole(address staff) external;
-}
-
-interface IStaffMetadataRegistryGov {
-    function setStaffMetadata(
-        uint48 branchId,
-        address staff,
-        string calldata name,
-        string calldata phoneNumber,
-        string calldata avatar
-    ) external;
 }
 
 /**
@@ -85,7 +77,7 @@ contract BranchGovernanceManager is
         orgId = _orgId;
         organizationManager = _organizationManager;
         branchStaffManager = _branchStaffManager;
-        staffMetadataRegistry = _staffMetadataRegistry;
+        __reserved_metadataRegistry = _staffMetadataRegistry;
     }
 
     // ====== HÀM QUẢN TRỊ & BỎ PHIẾU ======
@@ -107,14 +99,14 @@ contract BranchGovernanceManager is
         uint256 totalVoters = _getTotalVotersCount(); // Chụp lại số cử tri tại thời điểm tạo
 
         // Tính toán hash của payload metadata để lưu trữ tiết kiệm Gas
-        bytes32 metadataHash = keccak256(abi.encode(name, phone, avatar));
+        bytes32 payloadHash = keccak256(abi.encode(name, phone, avatar));
 
         proposals[proposalId] = GovernanceTypes.Proposal({
             id: proposalId,
             proposalType: proposalType,
             target: target,
             role: role,
-            metadataHash: metadataHash,
+            payloadHash: payloadHash,
             creationTime: uint48(block.timestamp),
             endTime: uint48(block.timestamp + VOTING_DURATION),
             yesVotes: 0,
@@ -189,7 +181,7 @@ contract BranchGovernanceManager is
 
         // Xác thực tính khớp của payload truyền vào với hash đã lưu
         if (
-            keccak256(abi.encode(name, phone, avatar)) != proposal.metadataHash
+            keccak256(abi.encode(name, phone, avatar)) != proposal.payloadHash
         ) {
             revert HashMismatch();
         }
@@ -215,13 +207,19 @@ contract BranchGovernanceManager is
         } else if (
             proposal.proposalType == GovernanceTypes.ProposalType.UpdateMetadata
         ) {
-            IStaffMetadataRegistryGov(staffMetadataRegistry).setStaffMetadata(
-                branchId,
-                proposal.target,
-                name,
-                phone,
-                avatar
-            );
+            address registry = IBranchStaffManagerGov(branchStaffManager).staffMetadataRegistry();
+            if (registry != address(0)) {
+                bytes memory data = abi.encodeWithSignature(
+                    "setStaffMetadata(uint48,address,string,string,string)",
+                    branchId,
+                    proposal.target,
+                    name,
+                    phone,
+                    avatar
+                );
+                (bool success, ) = registry.call(data);
+                require(success, "Metadata update call failed");
+            }
         }
 
         emit ProposalExecuted(proposalId);
